@@ -2,7 +2,10 @@
   "name": "@classroom-api/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "dev:api": "nx serve classroom-api",
+    "build:api": "nx build classroom-api"
+  },
   "private": true,
   "dependencies": {
     "@nestjs/common": "^11.0.0",
