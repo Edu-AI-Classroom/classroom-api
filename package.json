@@ -4,7 +4,8 @@
   "license": "MIT",
   "scripts": {
     "dev:api": "nx serve classroom-api",
-    "build:api": "nx build classroom-api"
+    "build:api": "nx build classroom-api",
+    "start": "node dist/apps/classroom-api/main.js"
   },
   "private": true,
   "dependencies": {
