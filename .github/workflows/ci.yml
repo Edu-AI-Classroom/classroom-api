@@ -46,7 +46,7 @@ jobs:
 
       # Prisma generate
       - name: Prisma generate
-        run: pnpm dlx prisma generate
+        run: pnpm exec prisma generate
 
       # Commit message lint
       - name: lint commit message
