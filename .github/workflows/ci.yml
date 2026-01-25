@@ -39,6 +39,20 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Commit message lint
+      - name: lint commit message
+        if: github.event_name == 'pull_request'
+        uses: wagoid/commitlint-github-action@v6
+
+      # Nx affected for PR
+      - name: Run affected tasks (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          pnpm exec nx affected \
+            -t lint test build \
+            --base=origin/main \
+            --head=HEAD
+
       # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
       # - run: pnpm exec nx-cloud record -- echo Hello World
       - run: pnpm exec nx run-many -t lint test build
