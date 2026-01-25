@@ -51,7 +51,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Login nx cloud ci
-      - run: npx nx-cloud login --token=${{ secrets.CI_TOKEN }}
+      - run: npx nx-cloud login --token=${{ secrets.CI_TOKEN }} --verbose
 
       # Prisma generate
       - name: Prisma generate
@@ -64,6 +64,10 @@ jobs:
       # Check Prisma version
       - name: Check Prisma version
         run: pnpm exec prisma --version
+
+      # build application
+      - name: Build application
+        run: pnpm nx build classroom-api
 
       # Commit message lint
       - name: lint commit message
