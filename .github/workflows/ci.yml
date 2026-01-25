@@ -3,8 +3,14 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
+      - develop
+      - feature/*
   pull_request:
+    branches:
+      - main
+      - develop
+      - feature/*
 
 permissions:
   actions: read
@@ -39,6 +45,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Prisma generate
+      - name: Prisma generate
+        run: pnpm dlx prisma generate
+
       # Commit message lint
       - name: lint commit message
         if: github.event_name == 'pull_request'
@@ -56,6 +66,13 @@ jobs:
       # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
       # - run: pnpm exec nx-cloud record -- echo Hello World
       - run: pnpm exec nx run-many -t lint test build
+
+      # Handle Prisma $connect/$disconnect methods if needed (fix PrismaService issues)
+      - name: Run Prisma Database Migrations (Optional)
+        run: |
+          pnpm exec prisma migrate deploy
+        if: github.event_name == 'push'
+
       # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
       - run: pnpm exec nx fix-ci
         if: always()
