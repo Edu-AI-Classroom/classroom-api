@@ -1,12 +1,22 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { AppModule } from './app/app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { setupSwagger } from './config/swagger/swagger.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({
+      logger: process.env.NODE_ENV === 'development',
+      trustProxy: true,
+    }),
+  );
 
   // Global prefix
   const globalPrefix = 'api';
@@ -31,10 +41,10 @@ async function bootstrap() {
   );
 
   // Enable CORS
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN,
+  await app.register(import('@fastify/cors'), {
+    origin: process.env.CORS_ORIGIN || true,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   });
 
   // Setup Swagger documentation

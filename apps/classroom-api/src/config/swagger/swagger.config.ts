@@ -104,8 +104,6 @@ For technical support, please contact: support@edu-ai-classroom.com
       operationsSorter: 'alpha',
       tryItOutEnabled: true,
     },
+    jsonDocumentUrl: 'api/docs-json', // JSON spec available at this URL
   });
-
-  // Also create a JSON endpoint for the OpenAPI spec
-  SwaggerModule.setup('api/docs-json', app, document);
 }
