@@ -69,6 +69,9 @@ jobs:
       - name: Build application
         run: pnpm nx build classroom-api
 
+      - name: Check build result
+        run: ls dist/apps/classroom-api/
+
       # Commit message lint
       - name: lint commit message
         if: github.event_name == 'pull_request'
