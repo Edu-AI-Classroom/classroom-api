@@ -39,9 +39,6 @@ jobs:
       # Uncomment this line to enable task distribution
       # - run: pnpm dlx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
 
-      # clear pnpm cache
-      - run: pnpm store prune
-
       # Cache node_modules
       - uses: actions/setup-node@v4
         with:
@@ -57,10 +54,6 @@ jobs:
       - name: Prisma generate
         run: pnpm exec prisma generate
 
-      # Check if Prisma Client exists
-      - name: Check Prisma Client
-        run: ls -la .prisma
-
       # Check Prisma version
       - name: Check Prisma version
         run: pnpm exec prisma --version
@@ -68,9 +61,6 @@ jobs:
       # build application
       - name: Build application
         run: pnpm nx build classroom-api
-
-      - name: Check build result
-        run: ls dist/apps/classroom-api/
 
       # Commit message lint
       - name: lint commit message
