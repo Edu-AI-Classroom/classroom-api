@@ -47,3 +47,7 @@ Thumbs.db
 .env
 error.log
 *.log
+
+# ignore agent
+.agent
+
