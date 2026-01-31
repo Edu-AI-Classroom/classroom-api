@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import healthConfig from '../config/health/health.config';
+import { AppLoggerModule } from '../infrastructure/logger';
 import { PrismaModule } from '../infrastructure/prisma/prisma.module';
 import { HealthModule } from '../modules/health/health.module';
 
@@ -14,6 +15,7 @@ import { HealthModule } from '../modules/health/health.module';
     }),
     HealthModule,
     PrismaModule,
+    AppLoggerModule,
   ],
   controllers: [],
   providers: [],

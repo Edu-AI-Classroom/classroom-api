@@ -1,6 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Req, Res } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
+
+import { PinoLogger } from 'nestjs-pino';
 import { HealthService } from './health.service';
 
 @ApiTags('Health')
@@ -9,6 +11,7 @@ export class HealthController {
   constructor(
     private readonly healthService: HealthService,
     private readonly healthCheckService: HealthCheckService,
+    private readonly logger: PinoLogger,
   ) {}
 
   @Get()
@@ -113,7 +116,8 @@ This endpoint is commonly used by:
       },
     },
   })
-  check() {
+  check(@Req() req: any, @Res({ passthrough: true }) res: any) {
+    this.logger.info({ req, res }, 'Health check request received');
     return this.healthCheckService.check(this.healthService.getHealthChecks());
   }
 }
