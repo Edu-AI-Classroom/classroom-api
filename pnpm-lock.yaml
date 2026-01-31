@@ -46,6 +46,9 @@ importers:
       '@nestjs/terminus':
         specifier: 11.0.0
         version: 11.0.0(@nestjs/axios@4.0.1(@nestjs/common@11.1.12(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.1.13)(rxjs@7.8.0))(axios@1.13.4)(rxjs@7.8.0))(@nestjs/common@11.1.12(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.1.13)(rxjs@7.8.0))(@nestjs/core@11.1.12)(@nestjs/microservices@11.1.12)(@prisma/client@7.3.0(prisma@7.3.0(@types/react@19.2.9)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3))(typescript@5.9.3))(reflect-metadata@0.1.13)(rxjs@7.8.0)
+      '@payos/node':
+        specifier: ^2.0.4
+        version: 2.0.4
       '@prisma/adapter-pg':
         specifier: 7.3.0
         version: 7.3.0
@@ -2600,6 +2603,12 @@ packages:
         integrity: sha512-tmmZ3lQxAe/k/+rNnXQRawJ4NjxO2hqiOLTHvWchtGZULp4RyFeh6aU4XdOYBFe2KE1oShQTv4AblOs2iOrNnQ==,
       }
     engines: { node: '>= 10.0.0' }
+
+  '@payos/node@2.0.4':
+    resolution:
+      {
+        integrity: sha512-ZJ5jgKVJDx2OBfOrhLqjWBZwC4JCidEFgHXz8k3CkhfmyZImd0raL85+DtKCJABMLrMLM6Sb0G8Xsru7HFxInA==,
+      }
 
   '@peculiar/asn1-cms@2.6.0':
     resolution:
@@ -12637,6 +12646,8 @@ snapshots:
       '@parcel/watcher-win32-ia32': 2.5.6
       '@parcel/watcher-win32-x64': 2.5.6
     optional: true
+
+  '@payos/node@2.0.4': {}
 
   '@peculiar/asn1-cms@2.6.0':
     dependencies:
