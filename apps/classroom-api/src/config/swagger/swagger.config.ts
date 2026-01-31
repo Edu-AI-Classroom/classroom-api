@@ -67,6 +67,7 @@ For technical support, please contact: support@edu-ai-classroom.com
     .addTag('Classrooms', 'Classroom management and operations')
     .addTag('Courses', 'Course and curriculum management')
     .addTag('Lessons', 'Lesson content and materials')
+    .addTag('Subscription Plans', 'Gói subscription và quản lý gói')
     .addTag('Assignments', 'Assignment creation and submission')
     .addTag('Grades', 'Grading and assessment')
     .addTag('Analytics', 'Performance analytics and reporting')

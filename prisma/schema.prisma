@@ -24,6 +24,7 @@ model USER {
   personal_info   personal_info?
   student         student?
   transaction     transaction[]
+  user_subscription user_subscription[]
 }
 
 model ai_audit_log {
@@ -323,15 +324,53 @@ model submission_ans {
 
   @@id([attempt_id, gen_block_id])
 }
+model subscription_plan {
+  plan_id Int @id @default(autoincrement())
+  code String @unique @db.VarChar(50) 
+  name String @db.VarChar(100)
+  price Decimal @db.Decimal(10, 2)
+  duration_days Int 
+  ai_token_limit Int 
+  ai_request_limit Int?
+  max_classes Int?
+  max_exams_per_month Int?
+  max_lessons_ai Int?
+  is_active Boolean @default(true)
+  created_at DateTime @default(now())
+  transaction transaction[]
+  user_subscription user_subscription[]
+}
 
 model transaction {
   transaction_id   Int       @id @default(autoincrement())
   user_id          Int?
-  payment_gateway  String?   @db.VarChar(50)
-  transaction_type String?   @db.VarChar(50)
+  plan_id          Int?
+  payment_gateway  String?   
+  order_code       String?   @unique 
+  transaction_type String?   
+  currency         String?   @default("VND") 
+  status           String?  
+  checkout_url     String?
+  reference_id     String?          
   amount           Decimal?  @db.Decimal(10, 2)
   note             String?
-  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  gateway_response Json?
+  created_at       DateTime? @default(now())
+  updated_at       DateTime? @db.Timestamp(6)
   USER             USER?     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  subscription_plan subscription_plan? @relation(fields: [plan_id], references: [plan_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
+model user_subscription {
+  user_sub_id Int @id @default(autoincrement())
+  user_id Int?
+  plan_id Int?
+  USER  USER? @relation(fields: [user_id], references: [user_id], onDelete:NoAction, onUpdate: NoAction)
+  subscription_plan subscription_plan? @relation(fields: [plan_id], references: [plan_id], onDelete:NoAction, onUpdate: NoAction)
+  start_date DateTime
+  end_date DateTime
+  remaining_tokens Int
+  remaining_requests Int?
+  created_at DateTime @default(now())
+  updated_at DateTime @db.Timestamp(6)
+}

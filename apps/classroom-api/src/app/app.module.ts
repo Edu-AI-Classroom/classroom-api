@@ -6,6 +6,7 @@ import { PrismaModule } from '../infrastructure/prisma/prisma.module';
 import { AuthModule } from '../modules/auth/auth.module';
 import { HealthModule } from '../modules/health/health.module';
 import { LessonsModule } from '../modules/lessons/lessons.module';
+import { SubscriptionPlanModule } from '../modules/subscription-plan/subscription-plan.module';
 import { UsersModule } from '../modules/users/users.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { UsersModule } from '../modules/users/users.module';
     PrismaModule,
     AuthModule,
     LessonsModule,
+    SubscriptionPlanModule,
     UsersModule,
   ],
   controllers: [],
