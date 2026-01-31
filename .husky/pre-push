@@ -1,0 +1,12 @@
+#!/bin/sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# check if branch name is valid
+BRANCH_NAME=$(git symbolic-ref --short HEAD)
+PATTERN="^((feat|fix|docs|style|refactor|test|chore|ci|perf|build|revert)/([a-zA-Z0-9-]+))$"
+if [[ ! $BRANCH_NAME =~ $PATTERN ]]; then
+  echo "Branch name is not valid. Please use the following format: <type>(<scope>): <subject>"
+  exit 1
+fi
+
+echo "✅ Branch name is valid: $BRANCH_NAME"

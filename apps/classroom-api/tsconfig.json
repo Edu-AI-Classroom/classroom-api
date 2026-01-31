@@ -12,13 +12,12 @@
   ],
   "compilerOptions": {
     "esModuleInterop": true,
-    "baseUrl": "./src",
+    "baseUrl": "./",
     "paths": {
       "@/*": ["src/*"],
-      "@/modules/*": ["src/modules/*"],
-      "@/infrastructure/*": ["src/infrastructure/*"],
-      "@/config/*": ["src/config/*"],
-      "@/common/*": ["src/common/*"]
+      "@shared/*": ["src/shared/*"],
+      "@common/*": ["src/common/*"],
+      "@infrastructure/*": ["src/infrastructure/*"]
     }
   }
 }
