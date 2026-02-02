@@ -51,7 +51,7 @@ export class ClassroomService {
         subject_id: subjectId,
         created_by: userId,
         // Add the creator as a teacher with owner privileges
-        teacher_class: {
+        teacher_classroom: {
           create: {
             teacher_id: userId,
             is_owner: true,
@@ -60,8 +60,8 @@ export class ClassroomService {
       },
       include: {
         subject: true,
-        created_by_user: true,
-        teacher_class: true,
+        USER: true,
+        teacher_classroom: true,
         class_student: true,
         class_group: true,
       },
@@ -81,8 +81,8 @@ export class ClassroomService {
       where: { class_id: classId },
       include: {
         subject: true,
-        created_by_user: true,
-        teacher_class: true,
+        USER: true,
+        teacher_classroom: true,
         class_student: true,
         class_group: true,
       },
@@ -122,7 +122,7 @@ export class ClassroomService {
               OR: [
                 { created_by: userId },
                 {
-                  teacher_class: {
+                  teacher_classroom: {
                     some: {
                       teacher_id: userId,
                     },
@@ -134,8 +134,8 @@ export class ClassroomService {
         },
         include: {
           subject: true,
-          created_by_user: true,
-          teacher_class: true,
+          USER: true,
+          teacher_classroom: true,
           class_student: true,
           class_group: true,
         },
@@ -151,7 +151,7 @@ export class ClassroomService {
               OR: [
                 { created_by: userId },
                 {
-                  teacher_class: {
+                  teacher_classroom: {
                     some: {
                       teacher_id: userId,
                     },
@@ -200,8 +200,8 @@ export class ClassroomService {
       },
       include: {
         subject: true,
-        created_by_user: true,
-        teacher_class: true,
+        USER: true,
+        teacher_classroom: true,
         class_student: true,
         class_group: true,
       },
@@ -326,20 +326,20 @@ export class ClassroomService {
     classId: number,
     userId: number,
   ): Promise<TeacherResponseDto[]> {
-    // Verify user has access to this classroom
     await this.verifyUserAccessToClassroom(userId, classId);
 
     const teachers = await this.prisma.teacher_classroom.findMany({
       where: { class_id: classId },
       include: {
-        teacher: true,
+        USER: true, // Phải dùng 'USER' vì schema định nghĩa là USER
       },
     });
 
     return teachers.map((tc) => ({
-      teacherId: tc.teacher.user_id,
-      teacherName: tc.teacher.user_name,
-      email: tc.teacher.email,
+      // Truy cập thông qua tc.USER
+      teacherId: tc.USER.user_id,
+      teacherName: tc.USER.user_name, // Giả sử trường tên là full_name hoặc user_name
+      email: tc.USER.email,
       addedAt: tc.added_at?.toISOString(),
       isOwner: tc.is_owner,
     }));
@@ -465,7 +465,7 @@ export class ClassroomService {
     await this.prisma.group_student.deleteMany({
       where: {
         student_id: studentId,
-        group: {
+        class_group: {
           class_id: classId,
         },
       },
@@ -510,13 +510,13 @@ export class ClassroomService {
               USER: true,
               group_student: {
                 where: {
-                  group: {
+                  class_group: {
                     class_id: classId,
                     is_deleted: false,
                   },
                 },
                 include: {
-                  group: true,
+                  class_group: true,
                 },
               },
             },
@@ -710,7 +710,7 @@ export class ClassroomService {
     const existingGroupStudent = await this.prisma.group_student.findFirst({
       where: {
         student_id: studentId,
-        group: {
+        class_group: {
           class_id: classId,
           is_deleted: false,
         },
@@ -894,7 +894,7 @@ export class ClassroomService {
         OR: [
           { created_by: userId },
           {
-            teacher_class: {
+            teacher_classroom: {
               some: {
                 teacher_id: userId,
               },
@@ -930,7 +930,7 @@ export class ClassroomService {
       where: {
         class_id: classId,
         is_deleted: false,
-        teacher_class: {
+        teacher_classroom: {
           some: {
             teacher_id: userId,
             is_owner: true,

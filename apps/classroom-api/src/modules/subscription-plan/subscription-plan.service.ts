@@ -12,26 +12,18 @@ export class SubscriptionPlanService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateSubscriptionPlanDto) {
-    const prisma = this.prisma as any;
-
-    const existing = await prisma.subscription_plan.findUnique({
-      where: { code: dto.code },
+    // 1. Kiểm tra trùng mã sub_code
+    const existing = await this.prisma.subscription_plan.findUnique({
+      where: { sub_code: dto.sub_code },
     });
     if (existing) {
-      throw new ConflictException(`Mã plan "${dto.code}" đã tồn tại`);
+      throw new ConflictException(`Mã plan "${dto.sub_code}" đã tồn tại`);
     }
 
-    const plan = await prisma.subscription_plan.create({
+    // 2. Tạo record (Prisma tự động loại bỏ fields undefined nếu để đúng cấu trúc)
+    const plan = await this.prisma.subscription_plan.create({
       data: {
-        code: dto.code,
-        name: dto.name,
-        price: dto.price,
-        duration_days: dto.duration_days,
-        ai_token_limit: dto.ai_token_limit,
-        ai_request_limit: dto.ai_request_limit ?? null,
-        max_classes: dto.max_classes ?? null,
-        max_exams_per_month: dto.max_exams_per_month ?? null,
-        max_lessons_ai: dto.max_lessons_ai ?? null,
+        ...dto,
         is_active: dto.is_active ?? true,
       },
     });
@@ -43,10 +35,8 @@ export class SubscriptionPlanService {
   }
 
   async findAll(activeOnly?: boolean) {
-    const prisma = this.prisma as any;
-
     const where = activeOnly ? { is_active: true } : {};
-    const plans = await prisma.subscription_plan.findMany({
+    const plans = await this.prisma.subscription_plan.findMany({
       where,
       orderBy: { price: 'asc' },
     });
@@ -55,10 +45,8 @@ export class SubscriptionPlanService {
   }
 
   async findOne(id: number) {
-    const prisma = this.prisma as any;
-
-    const plan = await prisma.subscription_plan.findUnique({
-      where: { plan_id: id },
+    const plan = await this.prisma.subscription_plan.findUnique({
+      where: { sub_id: id },
     });
     if (!plan) {
       throw new NotFoundException('Gói subscription không tồn tại');
@@ -66,11 +54,9 @@ export class SubscriptionPlanService {
     return this.mapToResponse(plan);
   }
 
-  async findByCode(code: string) {
-    const prisma = this.prisma as any;
-
-    const plan = await prisma.subscription_plan.findUnique({
-      where: { code },
+  async findByCode(sub_code: string) {
+    const plan = await this.prisma.subscription_plan.findUnique({
+      where: { sub_code },
     });
     if (!plan) {
       throw new NotFoundException('Gói subscription không tồn tại');
@@ -79,39 +65,26 @@ export class SubscriptionPlanService {
   }
 
   async update(id: number, dto: UpdateSubscriptionPlanDto) {
-    const prisma = this.prisma as any;
-
-    const existing = await prisma.subscription_plan.findUnique({
-      where: { plan_id: id },
+    const existing = await this.prisma.subscription_plan.findUnique({
+      where: { sub_id: id },
     });
     if (!existing) {
       throw new NotFoundException('Gói subscription không tồn tại');
     }
 
-    if (dto.code && dto.code !== existing.code) {
-      const duplicate = await prisma.subscription_plan.findUnique({
-        where: { code: dto.code },
+    // Kiểm tra nếu đổi sub_code thì có trùng với ai khác không
+    if (dto.sub_code && dto.sub_code !== existing.sub_code) {
+      const duplicate = await this.prisma.subscription_plan.findUnique({
+        where: { sub_code: dto.sub_code },
       });
       if (duplicate) {
-        throw new ConflictException(`Mã plan "${dto.code}" đã tồn tại`);
+        throw new ConflictException(`Mã plan "${dto.sub_code}" đã tồn tại`);
       }
     }
 
-    const plan = await prisma.subscription_plan.update({
-      where: { plan_id: id },
-      data: {
-        code: dto.code ?? existing.code,
-        name: dto.name ?? existing.name,
-        price: dto.price ?? existing.price,
-        duration_days: dto.duration_days ?? existing.duration_days,
-        ai_token_limit: dto.ai_token_limit ?? existing.ai_token_limit,
-        ai_request_limit: dto.ai_request_limit ?? existing.ai_request_limit,
-        max_classes: dto.max_classes ?? existing.max_classes,
-        max_exams_per_month:
-          dto.max_exams_per_month ?? existing.max_exams_per_month,
-        max_lessons_ai: dto.max_lessons_ai ?? existing.max_lessons_ai,
-        is_active: dto.is_active ?? existing.is_active,
-      },
+    const plan = await this.prisma.subscription_plan.update({
+      where: { sub_id: id },
+      data: dto,
     });
 
     return {
@@ -121,17 +94,15 @@ export class SubscriptionPlanService {
   }
 
   async remove(id: number) {
-    const prisma = this.prisma as any;
-
-    const existing = await prisma.subscription_plan.findUnique({
-      where: { plan_id: id },
+    const existing = await this.prisma.subscription_plan.findUnique({
+      where: { sub_id: id },
     });
     if (!existing) {
       throw new NotFoundException('Gói subscription không tồn tại');
     }
 
-    await prisma.subscription_plan.delete({
-      where: { plan_id: id },
+    await this.prisma.subscription_plan.delete({
+      where: { sub_id: id },
     });
 
     return { message: 'Xóa gói subscription thành công' };
@@ -139,18 +110,16 @@ export class SubscriptionPlanService {
 
   private mapToResponse(plan: any) {
     return {
-      planId: plan.plan_id,
-      code: plan.code,
-      name: plan.name,
-      price: Number(plan.price),
+      subId: plan.sub_id,
+      subCode: plan.sub_code,
+      subName: plan.sub_name,
+      price: Number(plan.price), // Chuyển Decimal sang Number
       durationDays: plan.duration_days,
       aiTokenLimit: plan.ai_token_limit,
       aiRequestLimit: plan.ai_request_limit,
       maxClasses: plan.max_classes,
-      maxExamsPerMonth: plan.max_exams_per_month,
-      maxLessonsAi: plan.max_lessons_ai,
+      maxDocuments: plan.max_documents,
       isActive: plan.is_active,
-      createdAt: plan.created_at,
     };
   }
 }
