@@ -1,13 +1,390 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model USER {
+  user_id         Int            @id @default(autoincrement())
+  user_name       String         @db.VarChar(255)
+  email           String         @unique @db.VarChar(255)
+  password_hash   String?        @db.VarChar(255)
+  created_at      DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?      @db.Timestamp(6)
+  is_active       Boolean?       @default(true)
+  profile_picture String?        @db.VarChar(500)
+  role            String?        @db.VarChar(50)
+  credit          Int?           @default(0)
+  assessment      assessment[]
+  classroom_created  classroom[]  @relation("classroom_creator")
+  teacher_classes teacher_classroom[] @relation("teacher_classes")
+  content_bank    content_bank[]
+  document        document[]
+  personal_info   personal_info?
+  student         student?
+  teacher         teacher?
+  transaction     transaction[]
+}
+
+model ai_audit_log {
+  log_id           Int       @id @default(autoincrement())
+  user_id          Int?
+  feature          String?   @db.VarChar(100)
+  created_at       DateTime? @db.Timestamp(6)
+  interaction_data String?
+  total_tokens     Int?
+  cost             Decimal?  @db.Decimal(10, 6)
+  rating           Int?
+  request_id       String?   @db.VarChar(100)
+}
+
+model answer_key {
+  key_id         Int           @id @default(autoincrement())
+  gen_block_id   Int?
+  answer_type    String?       @db.VarChar(50)
+  correct_answer String?
+  score          Decimal?      @db.Decimal(5, 2)
+  layout_block   layout_block? @relation(fields: [gen_block_id], references: [block_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model assessment {
+  assessment_id      Int                  @id @default(autoincrement())
+  doc_id             Int?
+  class_id           Int?
+  start_date         DateTime?            @db.Timestamp(6)
+  due_date           DateTime?            @db.Timestamp(6)
+  total_done         Int?
+  status             String?              @db.VarChar(50)
+  assigned_by        Int?
+  USER               USER?                @relation(fields: [assigned_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  classroom          classroom?           @relation(fields: [class_id], references: [class_id], onDelete: NoAction, onUpdate: NoAction)
+  document           document?            @relation(fields: [doc_id], references: [doc_id], onDelete: NoAction, onUpdate: NoAction)
+  student_submission student_submission[]
+}
+
+model audit_log {
+  log_id     Int     @id @default(autoincrement())
+  user_id    Int?
+  role       String? @db.VarChar(50)
+  table_name String? @db.VarChar(100)
+  record_id  Int?
+  feature    String? @db.VarChar(100)
+  action     String? @db.VarChar(100)
+  old_value  String?
+  new_value  String?
+  client_ip  String? @db.VarChar(45)
+  user_agent String?
+}
+
+model book {
+  book_id      Int            @id @default(autoincrement())
+  subject_id   Int?
+  grade_level  Int?
+  volume       Int?
+  book_title   String?        @db.VarChar(255)
+  publisher    String?        @db.VarChar(255)
+  publish_year Int?
+  updated_at   DateTime?      @db.Timestamp(6)
+  subject      subject?       @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
+  book_section book_section[]
+}
+
+model book_section {
+  section_id      Int              @id @default(autoincrement())
+  book_id         Int?
+  chapter_title   String?          @db.VarChar(255)
+  section_title   String?          @db.VarChar(255)
+  hierarchy_level Int?
+  page_from       Int?
+  page_to         Int?
+  book            book?            @relation(fields: [book_id], references: [book_id], onDelete: NoAction, onUpdate: NoAction)
+  knowledge_unit  knowledge_unit[]
+}
+
+model class_student {
+  class_id   Int                  
+  student_id Int
+  joined_at  DateTime? @db.Timestamp(6)
+  classroom  classroom @relation(fields: [class_id], references: [class_id], onDelete: NoAction, onUpdate: NoAction)
+  student    student   @relation(fields: [student_id], references: [student_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([class_id, student_id])
+}
+
+model classroom {
+  class_id         Int               @id @default(autoincrement())
+  class_name       String            @db.VarChar(255)
+  subject_id       Int?
+  grade_level      Int?
+  created_by       Int               // Teacher who created the class
+  created_at       DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?         @updatedAt @db.Timestamp(6)
+  is_deleted       Boolean?          @default(false) // Soft delete
+  assessment       assessment[]
+  class_student    class_student[]
+  subject          subject?          @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
+  created_by_user  USER              @relation("classroom_creator", fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  teacher_class    teacher_classroom[] // Multiple teachers in one class
+  student_report   student_report[]
+  class_group      class_group[]
+}
+
+model teacher_classroom {
+  teacher_id  Int
+  class_id    Int
+  added_at    DateTime?      @default(now()) @db.Timestamp(6)
+  is_owner    Boolean        @default(false) // The teacher who created the class is the owner
+  classroom   classroom      @relation(fields: [class_id], references: [class_id], onDelete: Cascade, onUpdate: NoAction)
+  teacher     USER           @relation("teacher_classes", fields: [teacher_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([teacher_id, class_id])
+}
+
+model class_group {
+  group_id      Int               @id @default(autoincrement())
+  class_id      Int
+  group_name    String            @db.VarChar(255)
+  created_at    DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?         @updatedAt @db.Timestamp(6)
+  is_deleted    Boolean?          @default(false) // Soft delete
+  classroom     classroom         @relation(fields: [class_id], references: [class_id], onDelete: Cascade, onUpdate: NoAction)
+  group_student group_student[]
+
+  @@unique([class_id, group_name])
+}
+
+model group_student {
+  group_id   Int
+  student_id Int
+  joined_at  DateTime?      @default(now()) @db.Timestamp(6)
+  group      class_group    @relation(fields: [group_id], references: [group_id], onDelete: Cascade, onUpdate: NoAction)
+  student    student        @relation(fields: [student_id], references: [student_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([group_id, student_id])
+}
+
+
+model content_bank {
+  content_id      Int       @id @default(autoincrement())
+  content_type    String?   @db.VarChar(50)
+  book_id         Int?
+  grade_level     Int?
+  subject_id      Int?
+  chapter_id      Int?
+  section_id      Int?
+  tags            String?   @db.VarChar(255)
+  cognitive_level String?   @db.VarChar(50)
+  content         String?
+  structure       String?
+  visibility      String?   @db.VarChar(20)
+  owner_id        Int?
+  usage_count     Int?      @default(0)
+  updated_at      DateTime? @db.Timestamp(6)
+  USER            USER?     @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  subject         subject?  @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model content_block {
+  content_id        Int           @id @default(autoincrement())
+  parent_content_id Int?
+  block_id          Int?
+  content           String?
+  source            String?       @db.VarChar(255)
+  is_active         Boolean?
+  created_at        DateTime?     @db.Timestamp(6)
+  is_locked         Boolean?
+  layout_block      layout_block? @relation(fields: [block_id], references: [block_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model document {
+  doc_id                                                     Int                @id @default(autoincrement())
+  doc_title                                                  String?            @db.VarChar(255)
+  doc_type                                                   String?            @db.VarChar(50)
+  grade_level                                                Int?
+  subject_id                                                 Int?
+  note                                                       String?
+  page_setting                                               String?
+  status                                                     String?            @db.VarChar(50)
+  updated_at                                                 DateTime?          @db.Timestamp(6)
+  owner_id                                                   Int?
+  current_ver_id                                             Int?
+  assessment                                                 assessment[]
+  USER                                                       USER?              @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  subject                                                    subject?           @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
+  document_version_document_current_ver_idTodocument_version document_version?  @relation("document_current_ver_idTodocument_version", fields: [current_ver_id], references: [ver_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_doc_current_version")
+  document_version_document_version_doc_idTodocument         document_version[] @relation("document_version_doc_idTodocument")
+}
+
+model document_version {
+  ver_id                                             Int            @id @default(autoincrement())
+  doc_id                                             Int?
+  parent_ver_id                                      Int?
+  settings                                           String?
+  created_at                                         DateTime?      @db.Timestamp(6)
+  document_document_current_ver_idTodocument_version document[]     @relation("document_current_ver_idTodocument_version")
+  document_document_version_doc_idTodocument         document?      @relation("document_version_doc_idTodocument", fields: [doc_id], references: [doc_id], onDelete: NoAction, onUpdate: NoAction)
+  layout_block                                       layout_block[]
+}
+
+model knowledge_unit {
+  unit_id            Int                @id @default(autoincrement())
+  section_id         Int?
+  unit_type          String?            @db.VarChar(50)
+  learning_objective String?
+  content            String?
+  citation           String?            @db.VarChar(255)
+  embedding          String?
+  updated_at         DateTime?          @db.Timestamp(6)
+  book_section       book_section?      @relation(fields: [section_id], references: [section_id], onDelete: NoAction, onUpdate: NoAction)
+  student_ku_state   student_ku_state[]
+}
+
+model ku_reference {
+  knowledge_unit_id Int       @id
+  subject           String?   @db.VarChar(255)
+  grade_level       Int?
+  difficulty        Int?
+  cognitive_level   String?   @db.VarChar(50)
+  version           Int?
+  is_active         Boolean?
+  created_at        DateTime? @db.Timestamp(6)
+}
+
+model layout_block {
+  block_id         Int               @id @default(autoincrement())
+  parent_block_id  Int?
+  ver_id           Int?
+  block_type       String?           @db.VarChar(50)
+  semantic_role    String?           @db.VarChar(50)
+  layout_config    String?
+  content_config   String?
+  is_correct       Boolean?
+  created_at       DateTime?         @db.Timestamp(6)
+  is_locked        Boolean?
+  answer_key       answer_key[]
+  content_block    content_block[]
+  document_version document_version? @relation(fields: [ver_id], references: [ver_id], onDelete: NoAction, onUpdate: NoAction)
+  submission_ans   submission_ans[]
+}
+
+model layout_template {
+  template_id         Int       @id @default(autoincrement())
+  template_name       String?   @db.VarChar(255)
+  description         String?
+  preview_thumbnail   String?   @db.VarChar(500)
+  template_type       String?   @db.VarChar(50)
+  schema_definition   String?
+  structure_blueprint String?
+  ai_rule             String?
+  visibility          String?   @db.VarChar(20)
+  created_at          DateTime? @db.Timestamp(6)
+}
+
+model personal_info {
+  user_id        Int       @id
+  speciality     String?   @db.VarChar(255)
+  teacher_bio    String?
+  dob            DateTime? @db.Date
+  sub_start_date DateTime? @db.Timestamp(6)
+  sub_status     String?   @db.VarChar(50)
+  USER           USER      @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model teacher {
+  teacher_id         Int                  @id
+  specialization     String?              @db.VarChar(255)
+  department         String?              @db.VarChar(255)
+  qualification      String?              @db.VarChar(255)
+  experience_years   Int?
+  is_verified        Boolean?             @default(false)
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?            @updatedAt @db.Timestamp(6)
+  USER               USER                 @relation(fields: [teacher_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model student {
+  student_id         Int                  @id
+  grade_level        Int?
+  parent_phone       String?              @db.VarChar(20)
+  class_student      class_student[]
+  USER               USER                 @relation(fields: [student_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  student_ku_state   student_ku_state[]
+  student_report     student_report[]
+  student_submission student_submission[]
+  group_student      group_student[]
+}
+
+model student_ku_state {
+  student_id        Int
+  knowledge_unit_id Int
+  mastery           Decimal?       @db.Decimal(5, 2)
+  confidence        Decimal?       @db.Decimal(5, 2)
+  forgetting_rate   Decimal?       @db.Decimal(5, 2)
+  last_practiced    DateTime?      @db.Timestamp(6)
+  updated_at        DateTime?      @db.Timestamp(6)
+  knowledge_unit    knowledge_unit @relation(fields: [knowledge_unit_id], references: [unit_id], onDelete: NoAction, onUpdate: NoAction)
+  student           student        @relation(fields: [student_id], references: [student_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([student_id, knowledge_unit_id])
+}
+
+model student_report {
+  student_id           Int
+  class_id             Int
+  total_assessment     Int?
+  completed_assessment Int?
+  avg_score            Decimal?  @db.Decimal(5, 2)
+  updated_at           DateTime? @db.Timestamp(6)
+  classroom            classroom @relation(fields: [class_id], references: [class_id], onDelete: NoAction, onUpdate: NoAction)
+  student              student   @relation(fields: [student_id], references: [student_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([student_id, class_id])
+}
+
+model student_submission {
+  attempt_id     Int              @id @default(autoincrement())
+  assessment_id  Int?
+  student_id     Int?
+  total_score    Decimal?         @db.Decimal(5, 2)
+  status         String?          @db.VarChar(50)
+  feedback       String?
+  started_at     DateTime?        @db.Timestamp(6)
+  submitted_at   DateTime?        @db.Timestamp(6)
+  assessment     assessment?      @relation(fields: [assessment_id], references: [assessment_id], onDelete: NoAction, onUpdate: NoAction)
+  student        student?         @relation(fields: [student_id], references: [student_id], onDelete: NoAction, onUpdate: NoAction)
+  submission_ans submission_ans[]
+}
+
+model subject {
+  subject_id   Int            @id @default(autoincrement())
+  subject_name String         @db.VarChar(255)
+  book         book[]
+  classroom    classroom[]
+  content_bank content_bank[]
+  document     document[]
+}
+
+model submission_ans {
+  attempt_id         Int
+  gen_block_id       Int
+  student_answer     String?
+  score              Decimal?           @db.Decimal(5, 2)
+  feedback           String?
+  student_submission student_submission @relation(fields: [attempt_id], references: [attempt_id], onDelete: NoAction, onUpdate: NoAction)
+  layout_block       layout_block       @relation(fields: [gen_block_id], references: [block_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([attempt_id, gen_block_id])
+}
+
+model transaction {
+  transaction_id   Int       @id @default(autoincrement())
+  user_id          Int?
+  payment_gateway  String?   @db.VarChar(50)
+  transaction_type String?   @db.VarChar(50)
+  amount           Decimal?  @db.Decimal(10, 2)
+  note             String?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  USER             USER?     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 }

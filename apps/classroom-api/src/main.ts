@@ -1,3 +1,4 @@
+import fastifyCors from '@fastify/cors';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import {
@@ -41,7 +42,7 @@ async function bootstrap() {
   );
 
   // Enable CORS
-  await app.register(import('@fastify/cors'), {
+  await app.register(fastifyCors, {
     origin: process.env.CORS_ORIGIN || true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

@@ -1,0 +1,11 @@
+export { AddStudentDto } from './add-student.dto';
+export { AddTeacherDto } from './add-teacher.dto';
+export { AssignStudentToGroupDto } from './assign-student-to-group.dto';
+export { ClassroomResponseDto } from './classroom-response.dto';
+export { CreateClassroomDto } from './create-classroom.dto';
+export { CreateGroupDto } from './create-group.dto';
+export { GroupResponseDto } from './group-response.dto';
+export { StudentResponseDto } from './student-response.dto';
+export { TeacherResponseDto } from './teacher-response.dto';
+export { UpdateClassroomDto } from './update-classroom.dto';
+export { UpdateGroupDto } from './update-group.dto';
