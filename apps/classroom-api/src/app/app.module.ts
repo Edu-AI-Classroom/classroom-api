@@ -8,7 +8,7 @@ import { AuthModule } from '../modules/auth/auth.module';
 import { JwtAuthGuard } from '../modules/auth/guards/jwt-auth.guard';
 import { ClassroomModule } from '../modules/classroom/classroom.module';
 import { HealthModule } from '../modules/health/health.module';
-// import { LessonsModule } from '../modules/lessons/lessons.module';
+import { LessonsModule } from '../modules/lessons/lessons.module';
 // import { PaymentModule } from '../modules/payment/payment.module';
 import { SubscriptionPlanModule } from '../modules/subscription-plan/subscription-plan.module';
 import { UsersModule } from '../modules/users/users.module';
@@ -30,7 +30,7 @@ import { UsersModule } from '../modules/users/users.module';
     HealthModule,
     PrismaModule,
     AuthModule,
-    // LessonsModule,
+    LessonsModule,
     SubscriptionPlanModule,
     UsersModule,
     ClassroomModule,
