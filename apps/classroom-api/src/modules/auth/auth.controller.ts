@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiBody,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -14,32 +13,26 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard) // Chỉ dùng 1 lần ở đây
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
   @Post('login')
-  @ApiOperation({ summary: 'Đăng nhập (email + password), trả về JWT' })
-  @ApiBody({ type: LoginDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Đăng nhập thành công, trả về access_token',
-  })
-  @ApiResponse({ status: 401, description: 'Email hoặc mật khẩu không đúng' })
+  @ApiOperation({ summary: 'Đăng nhập' })
+  @ApiResponse({ status: 201, description: 'Success' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
   @Get('profile')
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Lấy thông tin user đang đăng nhập (cần JWT)' })
+  // Không cần @ApiBearerAuth ở đây nữa nếu đã có ở cấp Class
+  @ApiOperation({ summary: 'Lấy thông tin profile' })
   @ApiResponse({ status: 200, description: 'Thông tin user' })
   @ApiResponse({
     status: 401,
-    description: 'Chưa đăng nhập hoặc token hết hạn',
+    description: 'Giải thích cụ thể sẽ nằm ở message trả về',
   })
   getProfile(@CurrentUser() user: AuthUser) {
     return {
