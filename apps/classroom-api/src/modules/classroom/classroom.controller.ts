@@ -51,7 +51,7 @@ export class ClassroomController {
   // ==================== CLASSROOM CRUD ====================
 
   @Post()
-  @Roles('TEACHER')
+  @Roles('TEACHER', 'ADMIN')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create a new classroom',

@@ -26,6 +26,10 @@ model USER {
   teacher           teacher?
   teacher_classroom teacher_classroom[]
   transaction       transaction[]
+
+  news_posts        news[]              @relation("UserPosts")
+  approved_news     news[]              @relation("ApprovedNews")
+  comments          comment[]
 }
 
 model ai_audit_log {
@@ -142,6 +146,7 @@ model classroom {
   subject           subject?            @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
   student_report    student_report[]
   teacher_classroom teacher_classroom[]
+  news              news[]
 }
 
 model content_bank {
@@ -402,4 +407,42 @@ model transaction {
   note             String?
   created_at       DateTime? @default(now()) @db.Timestamp(6)
   USER             USER?     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model news {
+  news_id      Int       @id @default(autoincrement())
+  class_id     Int
+  user_post_id Int?
+  title        String    @db.VarChar(255)
+  content      String?   @db.Text
+  media_url    String?   @db.VarChar(255)
+  status       String?   @db.VarChar(50)
+  uploaded_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at   DateTime? @db.Timestamp(6)
+  approved_by  Int?
+  approved_at  DateTime? @db.Timestamp(6)
+
+  classroom        classroom @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
+  user_post        USER?     @relation("UserPosts", fields: [user_post_id], references: [user_id], onDelete: NoAction)
+  approved_by_user USER?     @relation("ApprovedNews", fields: [approved_by], references: [user_id], onDelete: NoAction)
+  comments         comment[]
+
+  @@map("news")
+}
+
+model comment {
+  comment_id        Int       @id @default(autoincrement())
+  parent_comment_id Int?
+  news_id           Int
+  user_id           Int
+  content           String    @db.Text
+  uploaded_at       DateTime? @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @db.Timestamp(6)
+
+  news           news      @relation(fields: [news_id], references: [news_id], onDelete: Cascade)
+  user           USER      @relation(fields: [user_id], references: [user_id], onDelete: NoAction)
+  parent_comment comment?  @relation("CommentToComment", fields: [parent_comment_id], references: [comment_id], onDelete: Cascade)
+  replies        comment[] @relation("CommentToComment")
+
+  @@map("comment")
 }
