@@ -12,7 +12,9 @@ import { LessonsModule } from '../modules/lessons/lessons.module';
 // import { PaymentModule } from '../modules/payment/payment.module';
 import { SubscriptionPlanModule } from '../modules/subscription-plan/subscription-plan.module';
 import { UsersModule } from '../modules/users/users.module';
-
+import { NewsModule } from '../modules/new/news.module';
+import { CommentsModule } from '../modules/comment/comments.module';
+import { R2Module } from '../infrastructure/cloudflare_r2/r2.module';
 @Module({
   providers: [
     {
@@ -35,6 +37,9 @@ import { UsersModule } from '../modules/users/users.module';
     UsersModule,
     ClassroomModule,
     // PaymentModule,
+    NewsModule,
+    CommentsModule,
+    R2Module,
   ],
   controllers: [],
 })
