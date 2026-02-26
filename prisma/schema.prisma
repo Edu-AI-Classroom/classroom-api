@@ -405,6 +405,8 @@ model transaction {
   transaction_type String?   @db.VarChar(50)
   amount           Decimal?  @db.Decimal(10, 2)
   note             String?
+  order_code       String?   @unique @db.VarChar(50)
+  sub_code         String?   @db.VarChar(50)
   created_at       DateTime? @default(now()) @db.Timestamp(6)
   USER             USER?     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 }
