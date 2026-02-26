@@ -1,3 +1,4 @@
+import fastifyCors from '@fastify/cors';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import {
@@ -8,7 +9,6 @@ import { AppModule } from './app/app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { setupSwagger } from './config/swagger/swagger.config';
-
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
@@ -41,7 +41,7 @@ async function bootstrap() {
   );
 
   // Enable CORS
-  await app.register(import('@fastify/cors'), {
+  await app.register(fastifyCors, {
     origin: process.env.CORS_ORIGIN || true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
