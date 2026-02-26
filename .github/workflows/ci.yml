@@ -3,29 +3,30 @@ name: CI
 on:
   pull_request:
     branches: [main, develop]
-  push:
-    branches: [main, develop]
 
 permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   NX_CLOUD_ACCESS_TOKEN: ${{ secrets.CI_TOKEN }}
-  NODE_VERSION: 20
+  NODE_VERSION: 22
 
 jobs:
-  ci:
+  verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-      # Checkout full history (NX affected needs this)
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Setup Node + pnpm
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -41,38 +42,37 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Commitlint (fail fast)
       - name: Lint commit message
-        if: github.event_name == 'pull_request'
         uses: wagoid/commitlint-github-action@v6
 
-      # Prisma generate (safe)
       - name: Prisma generate
         run: pnpm exec prisma generate
 
-      # NX affected for PR
-      - name: Nx affected (PR)
-        if: github.event_name == 'pull_request'
+      - name: Nx affected
         run: |
           pnpm exec nx affected \
             -t lint test build \
             --base=origin/${{ github.base_ref }} \
             --head=HEAD
 
-      # NX full run for main/develop
-      - name: Nx run-many (main/develop)
-        if: github.event_name == 'push'
-        run: |
-          pnpm exec nx run-many \
-            -t lint test build \
-            --all
-
-      # Optional: Prisma migrate (ONLY main)
-      - name: Prisma migrate deploy
-        if: github.ref == 'refs/heads/main'
-        run: pnpm exec prisma migrate deploy
-
-      # NX Cloud self-heal
       - name: Nx fix CI
         if: always()
         run: pnpm exec nx fix-ci
+
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: audit dependencies
+        run: pnpm audit --prod
+
+      - name: trivy scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: 'fs'
+          severity: 'CRITICAL, HIGH'
+          exit-code: '1'
+          format: 'table'
+          needs: verify

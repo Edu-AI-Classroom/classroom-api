@@ -1,0 +1,99 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17-alpine
+    container_name: classroom-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: classroom
+      POSTGRES_PASSWORD: 123123
+      POSTGRES_DB: classroom
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U classroom']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - classroom-network
+
+  # Redis Cache (Optional - for future use)
+  redis:
+    image: redis:7-alpine
+    container_name: classroom-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - classroom-network
+
+  # API Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: classroom-api
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    environment:
+      # Database
+      DATABASE_URL: postgresql://classroom:123123@postgres:5432/classroom?schema=public
+
+      # Application
+      NODE_ENV: production
+      PORT: 8080
+
+      # CORS (adjust as needed)
+      CORS_ORIGIN: http://localhost:3000
+
+      # Redis (if enabled)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - classroom-network
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    # Read-only root filesystem (except for necessary directories)
+    read_only: false
+    # Limit capabilities
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  classroom-network:
+    driver: bridge
