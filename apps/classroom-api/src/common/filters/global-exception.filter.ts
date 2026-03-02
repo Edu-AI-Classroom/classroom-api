@@ -68,7 +68,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         status === HttpStatus.INTERNAL_SERVER_ERROR
           ? 'Internal Server Error'
           : undefined,
-      validationErrors,
       timestamp: new Date().toISOString(),
       path: request.url,
     };
