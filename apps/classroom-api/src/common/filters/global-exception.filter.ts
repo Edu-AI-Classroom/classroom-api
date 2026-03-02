@@ -20,6 +20,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
+    let code: string | undefined;
     let validationErrors: Array<{ field: string; message: string }> | undefined;
 
     if (exception instanceof HttpException) {
@@ -31,6 +32,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       } else if (typeof exceptionResponse === 'object') {
         const responseObj = exceptionResponse as any;
         message = responseObj.message || responseObj.error || message;
+        code = responseObj.error || responseObj.code;
 
         // Handle validation errors
         if (Array.isArray(responseObj.message)) {
@@ -61,6 +63,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       success: false,
       statusCode: status,
       message,
+      code,
       error:
         status === HttpStatus.INTERNAL_SERVER_ERROR
           ? 'Internal Server Error'

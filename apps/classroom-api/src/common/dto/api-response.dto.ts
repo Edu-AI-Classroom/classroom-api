@@ -104,6 +104,13 @@ export class ErrorResponseDto {
   message: string;
 
   @ApiProperty({
+    description: 'Error code',
+    example: 'INVALID_REQUEST',
+    required: false,
+  })
+  code?: string;
+
+  @ApiProperty({
     description: 'Detailed error information',
     example: 'Validation failed',
     required: false,
