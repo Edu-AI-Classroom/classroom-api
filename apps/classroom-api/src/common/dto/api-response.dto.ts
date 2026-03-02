@@ -118,21 +118,6 @@ export class ErrorResponseDto {
   error?: string;
 
   @ApiProperty({
-    description: 'Validation errors (if applicable)',
-    required: false,
-    example: [
-      {
-        field: 'email',
-        message: 'Invalid email format',
-      },
-    ],
-  })
-  validationErrors?: Array<{
-    field: string;
-    message: string;
-  }>;
-
-  @ApiProperty({
     description: 'Timestamp of the error',
     example: '2026-01-25T11:48:00.000Z',
   })
