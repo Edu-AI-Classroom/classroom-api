@@ -349,6 +349,10 @@ export class ClassroomService {
    * Add a student to the classroom
    * If student doesn't exist, create a new student account
    */
+  /**
+   * Add a student to the classroom
+   * Only existing students (by email) can be added
+   */
   async addStudent(
     classId: number,
     userId: number,
@@ -357,51 +361,25 @@ export class ClassroomService {
     // Verify user is teacher in this classroom
     await this.verifyUserIsTeacher(userId, classId);
 
-    let student: any;
+    // Find student by email - must exist in system
+    const user = await this.prisma.uSER.findUnique({
+      where: { email: addStudentDto.email },
+    });
 
-    if (addStudentDto.email) {
-      // Find or create student by email
-      student = await this.prisma.uSER.findUnique({
-        where: { email: addStudentDto.email },
-      });
+    if (!user) {
+      throw new NotFoundException(
+        `User with email ${addStudentDto.email} not found in the system`,
+      );
+    }
 
-      if (!student) {
-        // Create new student account
-        student = await this.prisma.uSER.create({
-          data: {
-            email: addStudentDto.email,
-            user_name:
-              addStudentDto.studentName || addStudentDto.email.split('@')[0],
-            role: 'STUDENT',
-            is_active: true,
-            student: {
-              create: {},
-            },
-          },
-          include: {
-            student: true,
-          },
-        });
-      }
-    } else if (addStudentDto.studentName) {
-      // Create new student account with name
-      student = await this.prisma.uSER.create({
-        data: {
-          email: `student_${Date.now()}@classroom.local`,
-          user_name: addStudentDto.studentName,
-          role: 'STUDENT',
-          is_active: true,
-          student: {
-            create: {},
-          },
-        },
-        include: {
-          student: true,
-        },
-      });
-    } else {
+    // Check if user has student profile
+    const student = await this.prisma.student.findUnique({
+      where: { student_id: user.user_id },
+    });
+
+    if (!student) {
       throw new BadRequestException(
-        'Either email or studentName must be provided',
+        `User with email ${addStudentDto.email} is not a student`,
       );
     }
 
@@ -410,7 +388,7 @@ export class ClassroomService {
       where: {
         class_id_student_id: {
           class_id: classId,
-          student_id: student.user_id,
+          student_id: user.user_id,
         },
       },
     });
@@ -423,12 +401,23 @@ export class ClassroomService {
     const classStudent = await this.prisma.class_student.create({
       data: {
         class_id: classId,
-        student_id: student.user_id,
+        student_id: user.user_id,
       },
       include: {
         student: {
           include: {
             USER: true,
+            group_student: {
+              where: {
+                class_group: {
+                  class_id: classId,
+                  is_deleted: false,
+                },
+              },
+              include: {
+                class_group: true,
+              },
+            },
           },
         },
       },
@@ -953,7 +942,7 @@ export class ClassroomService {
     classroom: any,
     userId: number,
   ): ClassroomResponseDto {
-    const creatorTeacher = classroom.teacher_class?.find(
+    const creatorTeacher = classroom.teacher_classroom?.find(
       (tc: any) => tc.is_owner,
     );
     const isOwner = creatorTeacher?.teacher_id === userId;
@@ -965,12 +954,12 @@ export class ClassroomService {
       subjectId: classroom.subject_id,
       subjectName: classroom.subject?.subject_name,
       createdBy: classroom.created_by,
-      createdByName: classroom.created_by_user?.user_name,
+      createdByName: classroom.USER?.user_name,
       createdAt: classroom.created_at?.toISOString(),
       updatedAt: classroom.updated_at?.toISOString(),
       isDeleted: classroom.is_deleted,
       studentCount: classroom.class_student?.length || 0,
-      teacherCount: classroom.teacher_class?.length || 0,
+      teacherCount: classroom.teacher_classroom?.length || 0,
       groupCount:
         classroom.class_group?.filter((g: any) => !g.is_deleted).length || 0,
       isOwner,
@@ -987,10 +976,16 @@ export class ClassroomService {
     const groupStudent = classStudent.student?.group_student?.[0];
 
     return {
-      studentId: classStudent.student.user_id,
+      studentId: classStudent.student.student_id,
       studentName: classStudent.student.USER.user_name,
       email: classStudent.student.USER.email,
+      profilePicture: classStudent.student.USER.profile_picture,
+      role: classStudent.student.USER.role,
+      credit: classStudent.student.USER.credit,
+      isActive: classStudent.student.USER.is_active,
       gradeLevel: classStudent.student.grade_level,
+      parentPhone: classStudent.student.parent_phone,
+      createdAt: classStudent.student.USER.created_at?.toISOString(),
       joinedAt: classStudent.joined_at?.toISOString(),
       groupId: groupStudent?.group_id,
       groupName: groupStudent?.group?.group_name,
@@ -1010,9 +1005,16 @@ export class ClassroomService {
       studentCount: group.group_student?.length || 0,
       students:
         group.group_student?.map((gs: any) => ({
-          studentId: gs.student.user_id,
+          studentId: gs.student.student_id,
           studentName: gs.student.USER.user_name,
           email: gs.student.USER.email,
+          profilePicture: gs.student.USER.profile_picture,
+          role: gs.student.USER.role,
+          credit: gs.student.USER.credit,
+          isActive: gs.student.USER.is_active,
+          gradeLevel: gs.student.grade_level,
+          parentPhone: gs.student.parent_phone,
+          createdAt: gs.student.USER.created_at?.toISOString(),
         })) || [],
     };
   }
