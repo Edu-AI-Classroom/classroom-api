@@ -1,22 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty } from 'class-validator';
 
 export class AddStudentDto {
   @ApiProperty({
-    description: 'Student email address',
+    description: 'Student email address (must exist in the system)',
     example: 'student@example.com',
-    required: false,
   })
   @IsEmail()
-  @IsOptional()
-  email?: string;
-
-  @ApiProperty({
-    description: 'Student name (used if student does not exist)',
-    example: 'Nguyễn Văn B',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  studentName?: string;
+  @IsNotEmpty()
+  email: string;
 }
