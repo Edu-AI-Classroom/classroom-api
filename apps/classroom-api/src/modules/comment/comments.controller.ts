@@ -16,6 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/decorators/current-user.decorator'; // Thêm dòng này để lấy thông tin user từ token
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CommentsService } from './comments.service';
@@ -33,8 +34,11 @@ export class CommentsController {
   @ApiOperation({ summary: 'Tạo bình luận mới hoặc phản hồi' })
   @ApiResponse({ status: 201, description: 'Bình luận được gửi thành công' })
   @ApiBody({ type: CreateCommentDto })
-  create(@Body() dto: CreateCommentDto) {
-    return this.commentsService.create(dto);
+  create(
+    @CurrentUser('userId') userId: number, // Trích xuất ID người dùng đang đăng nhập
+    @Body() dto: CreateCommentDto,
+  ) {
+    return this.commentsService.create(userId, dto);
   }
 
   @Get('news/:newsId')
@@ -48,14 +52,21 @@ export class CommentsController {
   @ApiOperation({ summary: 'Chỉnh sửa bình luận' })
   @ApiResponse({ status: 200, description: 'Cập nhật thành công' })
   @ApiBody({ type: UpdateCommentDto })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCommentDto) {
-    return this.commentsService.update(id, dto);
+  update(
+    @CurrentUser('userId') userId: number, // Thêm xác thực người sửa
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCommentDto,
+  ) {
+    return this.commentsService.update(id, userId, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Xóa bình luận' })
   @ApiResponse({ status: 200, description: 'Xóa thành công' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.commentsService.remove(id);
+  remove(
+    @CurrentUser('userId') userId: number, // Thêm xác thực người xóa
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.commentsService.remove(id, userId);
   }
 }
