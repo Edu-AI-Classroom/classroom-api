@@ -45,8 +45,6 @@ export class SubscriptionPlanController {
   }
 
   @Get()
-  @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Danh sách gói subscription' })
   @ApiQuery({
     name: 'activeOnly',
@@ -63,8 +61,6 @@ export class SubscriptionPlanController {
 
   // Đổi parameter từ :code thành :sub_code cho đồng bộ với DB
   @Get('by-code/:sub_code')
-  @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Lấy gói theo mã định danh (sub_code)' })
   @ApiResponse({ status: 200, description: 'Chi tiết gói' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy' })
@@ -73,8 +69,6 @@ export class SubscriptionPlanController {
   }
 
   @Get(':id')
-  @Roles('ADMIN')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Chi tiết gói theo ID' })
   @ApiResponse({ status: 200, description: 'Chi tiết gói' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy' })

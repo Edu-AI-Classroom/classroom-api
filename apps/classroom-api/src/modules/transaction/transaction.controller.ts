@@ -11,13 +11,10 @@ import {
   Put,
   Query,
   UseGuards,
-  UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
-  ApiExcludeEndpoint,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -25,13 +22,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ValidateWebhookReplay } from './decorators/validate-webhook-replay.decorator';
-import {
-  CreateTransactionDto,
-  PayOSWebhookDto,
-  UpdateTransactionDto,
-} from './dtos';
-import { PayOSWebhookValidationPipe } from './pipes';
+import { CreateTransactionDto, UpdateTransactionDto } from './dtos';
 import { TransactionService } from './transaction.service';
 
 @ApiTags('Payment & Transactions')
@@ -89,34 +80,53 @@ export class TransactionController {
    * POST /transactions/webhook
    * Receives payment status updates from PayOS
    */
+  // @Public()
+  // @Post('webhook')
+  // @HttpCode(HttpStatus.OK)
+  // // @ApiExcludeEndpoint()
+  // // @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  // async handlePayOSWebhook(
+  //   @Body(PayOSWebhookValidationPipe) webhookDto: PayOSWebhookDto,
+  //   @ValidateWebhookReplay() replayInfo: any,
+  // ) {
+  //   try {
+  //     this.logger.log('Received PayOS webhook');
+  //     this.logger.log(
+  //       `📦 Webhook payload: OrderCode=${webhookDto.data.orderCode}, Status=${webhookDto.data.status}`,
+  //     );
+  //     this.logger.debug(`Replay check: ${JSON.stringify(replayInfo)}`);
+
+  //     return await this.transactionService.handlePayOSWebhook(webhookDto);
+  //   } catch (error) {
+  //     this.logger.error(`Webhook error: ${error.message}`);
+
+  //     return {
+  //       code: '01',
+  //       desc: error.message,
+  //       success: false,
+  //     };
+  //   }
+  // }
   @Public()
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
-  @ApiExcludeEndpoint()
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async handlePayOSWebhook(
-    @Body(PayOSWebhookValidationPipe) webhookDto: PayOSWebhookDto,
-    @ValidateWebhookReplay() replayInfo: any,
-  ) {
+  async handlePayOSWebhook(@Body() body: any) {
     try {
-      this.logger.log('Received PayOS webhook');
-      this.logger.log(
-        `📦 Webhook payload: OrderCode=${webhookDto.data.orderCode}, Status=${webhookDto.data.status}`,
-      );
-      this.logger.debug(`Replay check: ${JSON.stringify(replayInfo)}`);
+      console.log('📦 RAW WEBHOOK:', JSON.stringify(body));
 
-      return await this.transactionService.handlePayOSWebhook(webhookDto);
-    } catch (error) {
-      this.logger.error(`Webhook error: ${error.message}`);
+      // gọi service xử lý
+      // await this.transactionService.handlePayOSWebhook(body);
 
       return {
-        code: '01',
-        desc: error.message,
+        success: true,
+      };
+    } catch (error) {
+      console.error('Webhook error:', error);
+      return {
         success: false,
       };
     }
   }
-
   /**
    * Create transaction (general)
    * POST /transactions

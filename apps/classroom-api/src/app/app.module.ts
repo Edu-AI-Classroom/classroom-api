@@ -10,12 +10,12 @@ import { ClassroomModule } from '../modules/classroom/classroom.module';
 import { HealthModule } from '../modules/health/health.module';
 import { LessonsModule } from '../modules/lessons/lessons.module';
 // import { PaymentModule } from '../modules/payment/payment.module';
-import { SubscriptionPlanModule } from '../modules/subscription-plan/subscription-plan.module';
-import { UsersModule } from '../modules/users/users.module';
-import { TransactionModule } from '../modules/transaction/transaction.module';
-import { NewsModule } from '../modules/new/news.module';
-import { CommentsModule } from '../modules/comment/comments.module';
 import { R2Module } from '../infrastructure/cloudflare_r2/r2.module';
+import { CommentsModule } from '../modules/comment/comments.module';
+import { NewsModule } from '../modules/new/news.module';
+import { SubscriptionPlanModule } from '../modules/subscription-plan/subscription-plan.module';
+import { TransactionModule } from '../modules/transaction/transaction.module';
+import { UsersModule } from '../modules/users/users.module';
 @Module({
   providers: [
     {
