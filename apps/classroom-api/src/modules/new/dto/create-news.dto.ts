@@ -4,32 +4,31 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsEnum,
+  IsIn,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateNewsDto {
-  @ApiProperty({
-    example: 1,
-    description: 'ID of the classroom to post news in',
-  })
+  @ApiProperty({ example: 1, description: 'ID của lớp học' })
   @IsInt()
   @Type(() => Number)
   @IsNotEmpty()
-  class_id: number;
+  classId: number; // camelCase theo chuẩn
 
-  @ApiProperty({ example: 'Midterm Exam Schedule' })
+  @ApiPropertyOptional({ example: 'Nội dung thông báo...' })
   @IsString()
   @IsNotEmpty()
-  title: string;
+  content: string; // Đổi thành bắt buộc vì đây là thứ duy nhất người dùng nhập
 
-  @ApiPropertyOptional({ example: 'The exam will take place on Monday...' })
+  @ApiPropertyOptional({ example: 'all', enum: ['students', 'parents', 'all'] })
   @IsString()
+  @IsIn(['students', 'parents', 'all'])
   @IsOptional()
-  content?: string;
+  audience?: 'students' | 'parents' | 'all' = 'all';
 
-  @ApiPropertyOptional({ example: 'PUBLISHED', enum: ['DRAFT', 'PUBLISHED'] })
-  @IsString()
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
   @IsOptional()
-  status?: string = 'PUBLISHED';
+  isPinned?: boolean = false;
 }
