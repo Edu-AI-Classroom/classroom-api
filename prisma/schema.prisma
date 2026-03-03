@@ -142,6 +142,7 @@ model classroom {
   assessment        assessment[]
   class_group       class_group[]
   class_student     class_student[]
+  documents         document[]
   USER              USER                @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   subject           subject?            @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
   student_report    student_report[]
@@ -185,15 +186,18 @@ model document {
   doc_id                                                     Int                @id @default(autoincrement())
   doc_title                                                  String?            @db.VarChar(255)
   doc_type                                                   String?            @db.VarChar(50)
+  class_id                                                   Int?
   grade_level                                                Int?
   subject_id                                                 Int?
   note                                                       String?
   page_setting                                               String?
   status                                                     String?            @db.VarChar(50)
+  created_at                                                 DateTime?          @default(now()) @db.Timestamp(6)
   updated_at                                                 DateTime?          @db.Timestamp(6)
   owner_id                                                   Int?
   current_ver_id                                             Int?
   assessment                                                 assessment[]
+  classroom                                                  classroom?         @relation(fields: [class_id], references: [class_id], onDelete: SetNull, onUpdate: NoAction)
   USER                                                       USER?              @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   subject                                                    subject?           @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
   document_version_document_current_ver_idTodocument_version document_version?  @relation("document_current_ver_idTodocument_version", fields: [current_ver_id], references: [ver_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_doc_current_version")

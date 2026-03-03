@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -44,9 +45,16 @@ export class AssignmentController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List all assignments' })
+  @ApiOperation({
+    summary: 'List assignments - can filter by classroom using ?classId=X',
+  })
   @ApiResponse({ status: 200, description: 'List of assignments' })
-  findAll() {
+  findAll(@Query('classId') classId?: string) {
+    if (classId) {
+      return this.assignmentService.getAssignmentsByClassroom(
+        parseInt(classId),
+      );
+    }
     return this.assignmentService.listAssignments();
   }
 
