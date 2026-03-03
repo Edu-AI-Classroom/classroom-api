@@ -1,5 +1,4 @@
-#!/bin/sh
-. "$(dirname -- "$0")/_/husky.sh"
+
 
 # check if branch name is valid
 BRANCH_NAME=$(git symbolic-ref --short HEAD)

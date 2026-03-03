@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -74,9 +75,8 @@ The owner has full permissions:
   })
   async createClassroom(
     @Body() createClassroomDto: CreateClassroomDto,
+    @CurrentUser('userId') userId: number,
   ): Promise<ApiResponseDto<ClassroomResponseDto>> {
-    // In production: @CurrentUser() userId: number
-    const userId = 1; // Mock user ID
     const classroom = await this.classroomService.createClassroom(
       userId,
       createClassroomDto,
@@ -109,8 +109,8 @@ The owner has full permissions:
   })
   async getClassroom(
     @Param('classId') classId: number,
+    @CurrentUser('userId') userId: number,
   ): Promise<ApiResponseDto<ClassroomResponseDto>> {
-    const userId = 1; // Mock user ID
     const classroom = await this.classroomService.getClassroom(classId, userId);
     return {
       success: true,
@@ -139,7 +139,10 @@ Results are paginated and sorted by creation date (newest first).
     status: 200,
     description: 'Classrooms retrieved successfully',
   })
-  async getMyClassrooms(@Query() paginationDto: PaginationDto): Promise<
+  async getMyClassrooms(
+    @Query() paginationDto: PaginationDto,
+    @CurrentUser('userId') userId: number,
+  ): Promise<
     ApiResponseDto<{
       data: ClassroomResponseDto[];
       total: number;
@@ -147,7 +150,6 @@ Results are paginated and sorted by creation date (newest first).
       limit: number;
     }>
   > {
-    const userId = 1; // Mock user ID
     const result = await this.classroomService.getMyClassrooms(
       userId,
       paginationDto,
@@ -184,8 +186,8 @@ Any teacher in the classroom can update this information.
   async updateClassroom(
     @Param('classId') classId: number,
     @Body() updateClassroomDto: UpdateClassroomDto,
+    @CurrentUser('userId') userId: number,
   ): Promise<ApiResponseDto<ClassroomResponseDto>> {
-    const userId = 1; // Mock user ID
     const classroom = await this.classroomService.updateClassroom(
       classId,
       userId,
@@ -220,8 +222,10 @@ The classroom data is preserved in the database but marked as deleted.
     status: 204,
     description: 'Classroom deleted successfully',
   })
-  async deleteClassroom(@Param('classId') classId: number): Promise<void> {
-    const userId = 1; // Mock user ID
+  async deleteClassroom(
+    @Param('classId') classId: number,
+    @CurrentUser('userId') userId: number,
+  ): Promise<void> {
     await this.classroomService.deleteClassroom(classId, userId);
   }
 
@@ -256,8 +260,8 @@ Added teachers will have full permissions:
   async addTeacher(
     @Param('classId') classId: number,
     @Body() addTeacherDto: AddTeacherDto,
+    @CurrentUser('userId') userId: number,
   ): Promise<ApiResponseDto<TeacherResponseDto>> {
-    const userId = 1; // Mock user ID
     const teacher = await this.classroomService.addTeacher(
       classId,
       userId,
@@ -301,8 +305,8 @@ The owner cannot remove themselves.
   async removeTeacher(
     @Param('classId') classId: number,
     @Param('teacherId') teacherId: number,
+    @CurrentUser('userId') userId: number,
   ): Promise<void> {
-    const userId = 1; // Mock user ID
     await this.classroomService.removeTeacher(classId, userId, teacherId);
   }
 
@@ -325,8 +329,8 @@ The owner cannot remove themselves.
   })
   async getTeachers(
     @Param('classId') classId: number,
+    @CurrentUser('userId') userId: number,
   ): Promise<ApiResponseDto<TeacherResponseDto[]>> {
-    const userId = 1; // Mock user ID
     const teachers = await this.classroomService.getClassroomTeachers(
       classId,
       userId,
@@ -349,14 +353,10 @@ The owner cannot remove themselves.
   @ApiOperation({
     summary: 'Add a student to the classroom',
     description: `
-Add a student to the classroom by email or name.
+Add an existing student to the classroom by their email.
 
-If the student email already exists in the system, they will be added to the classroom.
-If the student does not exist, a new student account will be created.
-
-If only the name is provided, a new student account is created with an auto-generated email.
-
-Any teacher in the classroom can add students.
+The student must already exist in the system with a student profile.
+Only teachers in the classroom can add students.
     `,
   })
   @ApiParam({
@@ -372,8 +372,8 @@ Any teacher in the classroom can add students.
   async addStudent(
     @Param('classId') classId: number,
     @Body() addStudentDto: AddStudentDto,
+    @CurrentUser('userId') userId: number,
   ): Promise<ApiResponseDto<StudentResponseDto>> {
-    const userId = 1; // Mock user ID
     const student = await this.classroomService.addStudent(
       classId,
       userId,
@@ -418,8 +418,8 @@ If the student is in a group, they will be automatically removed from that group
   async removeStudent(
     @Param('classId') classId: number,
     @Param('studentId') studentId: number,
+    @CurrentUser('userId') userId: number,
   ): Promise<void> {
-    const userId = 1; // Mock user ID
     await this.classroomService.removeStudent(classId, userId, studentId);
   }
 
@@ -444,6 +444,7 @@ Results include current group assignment if any.
   async getStudents(
     @Param('classId') classId: number,
     @Query() paginationDto: PaginationDto,
+    @CurrentUser('userId') userId: number,
   ): Promise<
     ApiResponseDto<{
       data: StudentResponseDto[];
@@ -452,7 +453,6 @@ Results include current group assignment if any.
       limit: number;
     }>
   > {
-    const userId = 1; // Mock user ID
     const result = await this.classroomService.getClassroomStudents(
       classId,
       userId,
@@ -495,8 +495,8 @@ Group names must be unique within a classroom.
   async createGroup(
     @Param('classId') classId: number,
     @Body() createGroupDto: CreateGroupDto,
+    @CurrentUser('userId') userId: number,
   ): Promise<ApiResponseDto<GroupResponseDto>> {
-    const userId = 1; // Mock user ID
     const group = await this.classroomService.createGroup(
       classId,
       userId,
@@ -538,8 +538,8 @@ Group names must be unique within a classroom.
     @Param('classId') classId: number,
     @Param('groupId') groupId: number,
     @Body() updateGroupDto: UpdateGroupDto,
+    @CurrentUser('userId') userId: number,
   ): Promise<ApiResponseDto<GroupResponseDto>> {
-    const userId = 1; // Mock user ID
     const group = await this.classroomService.updateGroup(
       classId,
       groupId,
@@ -583,8 +583,8 @@ Students in the group will not be removed from the classroom, only from the grou
   async deleteGroup(
     @Param('classId') classId: number,
     @Param('groupId') groupId: number,
+    @CurrentUser('userId') userId: number,
   ): Promise<void> {
-    const userId = 1; // Mock user ID
     await this.classroomService.deleteGroup(classId, groupId, userId);
   }
 
@@ -609,6 +609,7 @@ Results include student count and member list for each group.
   async getGroups(
     @Param('classId') classId: number,
     @Query() paginationDto: PaginationDto,
+    @CurrentUser('userId') userId: number,
   ): Promise<
     ApiResponseDto<{
       data: GroupResponseDto[];
@@ -617,7 +618,6 @@ Results include student count and member list for each group.
       limit: number;
     }>
   > {
-    const userId = 1; // Mock user ID
     const result = await this.classroomService.getClassroomGroups(
       classId,
       userId,
@@ -658,8 +658,8 @@ Results include student count and member list for each group.
   async getGroup(
     @Param('classId') classId: number,
     @Param('groupId') groupId: number,
+    @CurrentUser('userId') userId: number,
   ): Promise<ApiResponseDto<GroupResponseDto>> {
-    const userId = 1; // Mock user ID
     const group = await this.classroomService.getGroup(
       classId,
       groupId,
@@ -706,8 +706,8 @@ Any teacher in the classroom can assign students to groups.
     @Param('classId') classId: number,
     @Param('groupId') groupId: number,
     @Body() assignStudentToGroupDto: AssignStudentToGroupDto,
+    @CurrentUser('userId') userId: number,
   ): Promise<ApiResponseDto<null>> {
-    const userId = 1; // Mock user ID
     await this.classroomService.assignStudentToGroup(
       classId,
       groupId,
@@ -757,8 +757,8 @@ Any teacher in the classroom can remove students from groups.
     @Param('classId') classId: number,
     @Param('groupId') groupId: number,
     @Param('studentId') studentId: number,
+    @CurrentUser('userId') userId: number,
   ): Promise<void> {
-    const userId = 1; // Mock user ID
     await this.classroomService.removeStudentFromGroup(
       classId,
       groupId,

@@ -104,6 +104,13 @@ export class ErrorResponseDto {
   message: string;
 
   @ApiProperty({
+    description: 'Error code',
+    example: 'INVALID_REQUEST',
+    required: false,
+  })
+  code?: string;
+
+  @ApiProperty({
     description: 'Detailed error information',
     example: 'Validation failed',
     required: false,
@@ -111,19 +118,11 @@ export class ErrorResponseDto {
   error?: string;
 
   @ApiProperty({
-    description: 'Validation errors (if applicable)',
+    description: 'Validation error details',
+    example: [{ field: 'classId', message: 'classId must be a number' }],
     required: false,
-    example: [
-      {
-        field: 'email',
-        message: 'Invalid email format',
-      },
-    ],
   })
-  validationErrors?: Array<{
-    field: string;
-    message: string;
-  }>;
+  validationErrors?: Array<{ field: string; message: string }>;
 
   @ApiProperty({
     description: 'Timestamp of the error',

@@ -45,6 +45,13 @@ export class GroupResponseDto {
         studentId: 5,
         studentName: 'Nguyễn Văn B',
         email: 'student@example.com',
+        profilePicture: null,
+        role: 'STUDENT',
+        credit: 0,
+        isActive: true,
+        gradeLevel: 6,
+        parentPhone: '0912345678',
+        createdAt: '2026-01-01T10:00:00.000Z',
       },
     ],
   })
@@ -52,5 +59,12 @@ export class GroupResponseDto {
     studentId: number;
     studentName: string;
     email: string;
+    profilePicture?: string | null;
+    role?: string | null;
+    credit?: number | null;
+    isActive?: boolean | null;
+    gradeLevel?: number | null;
+    parentPhone?: string | null;
+    createdAt?: string;
   }>;
 }
