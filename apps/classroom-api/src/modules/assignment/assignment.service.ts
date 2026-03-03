@@ -31,7 +31,7 @@ export class AssignmentService {
         grade_level: dto.gradeLevel ?? null,
         subject_id: dto.subjectId ?? null,
         note: dto.note ?? null,
-        status: 'draft',
+        status: 'published',
         owner_id: userId,
       },
     });
@@ -42,16 +42,13 @@ export class AssignmentService {
         doc_id: document.doc_id,
         class_id: dto.classId,
         assigned_by: userId,
-        status: 'draft',
+        status: 'published',
       },
     });
 
     return {
       message: 'Assignment created successfully',
-      data: {
-        ...document,
-        class_id: dto.classId,
-      },
+      data: this.transformDocumentToAssignment(document),
     };
   }
 
@@ -70,7 +67,7 @@ export class AssignmentService {
       throw new NotFoundException('Assignment not found');
     }
 
-    return document;
+    return this.transformDocumentToAssignment(document);
   }
 
   async listAssignments() {
@@ -82,7 +79,7 @@ export class AssignmentService {
       orderBy: { updated_at: 'desc' },
     });
 
-    return documents;
+    return documents.map((doc) => this.transformDocumentToAssignment(doc));
   }
 
   async getAssignmentsByClassroom(classId: number) {
@@ -105,11 +102,22 @@ export class AssignmentService {
         const bDate = b.due_date || b.document?.updated_at || new Date(0);
         return new Date(bDate).getTime() - new Date(aDate).getTime();
       })
-      .map((a) => ({
-        ...a.document!,
-        class_id: a.class_id,
-        assessment_id: a.assessment_id,
-      }));
+      .map((a) => this.transformDocumentToAssignment(a.document!));
+  }
+
+  private transformDocumentToAssignment(doc: any) {
+    return {
+      docId: doc.doc_id,
+      docTitle: doc.doc_title,
+      docType: doc.doc_type,
+      gradeLevel: doc.grade_level,
+      subjectId: doc.subject_id,
+      note: doc.note,
+      status: doc.status?.toLowerCase() || 'draft',
+      ownerId: doc.owner_id,
+      createdAt: doc.created_at || new Date().toISOString(),
+      updatedAt: doc.updated_at || new Date().toISOString(),
+    };
   }
 
   async updateAssignment(id: number, dto: UpdateAssignmentDto) {
@@ -134,7 +142,10 @@ export class AssignmentService {
       },
     });
 
-    return { message: 'Assignment updated successfully', data: updatedDoc };
+    return {
+      message: 'Assignment updated successfully',
+      data: this.transformDocumentToAssignment(updatedDoc),
+    };
   }
 
   async deleteAssignment(id: number) {
