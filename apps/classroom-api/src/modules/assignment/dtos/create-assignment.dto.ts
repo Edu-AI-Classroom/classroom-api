@@ -14,6 +14,11 @@ export class CreateAssignmentDto {
   @MaxLength(255)
   title: string;
 
+  @ApiProperty({ required: true, example: 1, description: 'classroom_id' })
+  @IsInt()
+  @IsNotEmpty()
+  classId: number;
+
   @ApiProperty({ required: false, example: 'Complete the exercises' })
   @IsOptional()
   @IsString()

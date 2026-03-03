@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { CreateAssignmentDto } from './dtos/create-assignment.dto';
 import { UpdateAssignmentDto } from './dtos/update-assignment.dto';
@@ -8,6 +12,18 @@ export class AssignmentService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createAssignment(dto: CreateAssignmentDto, userId: number) {
+    // Verify classroom exists
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { class_id: dto.classId },
+    });
+
+    if (!classroom) {
+      throw new BadRequestException(
+        `Classroom with ID ${dto.classId} not found`,
+      );
+    }
+
+    // Create document
     const document = await this.prisma.document.create({
       data: {
         doc_title: dto.title,
@@ -16,11 +32,27 @@ export class AssignmentService {
         subject_id: dto.subjectId ?? null,
         note: dto.note ?? null,
         status: 'draft',
-        owner_id: userId, // Authenticated user becomes the owner
+        owner_id: userId,
       },
     });
 
-    return { message: 'Assignment created successfully', data: document };
+    // Create assessment record to link classroom with assignment
+    await this.prisma.assessment.create({
+      data: {
+        doc_id: document.doc_id,
+        class_id: dto.classId,
+        assigned_by: userId,
+        status: 'draft',
+      },
+    });
+
+    return {
+      message: 'Assignment created successfully',
+      data: {
+        ...document,
+        class_id: dto.classId,
+      },
+    };
   }
 
   async getAssignmentById(id: number) {
@@ -28,6 +60,9 @@ export class AssignmentService {
       where: {
         doc_id: id,
         doc_type: 'ASSIGNMENT',
+      },
+      include: {
+        assessment: true,
       },
     });
 
@@ -41,10 +76,34 @@ export class AssignmentService {
   async listAssignments() {
     const documents = await this.prisma.document.findMany({
       where: { doc_type: 'ASSIGNMENT' },
+      include: {
+        assessment: true,
+      },
       orderBy: { updated_at: 'desc' },
     });
 
     return documents;
+  }
+
+  async getAssignmentsByClassroom(classId: number) {
+    const assignments = await this.prisma.assessment.findMany({
+      where: {
+        class_id: classId,
+        document: {
+          doc_type: 'ASSIGNMENT',
+        },
+      },
+      include: {
+        document: true,
+      },
+      orderBy: { due_date: 'desc' },
+    });
+
+    return assignments.map((a) => ({
+      ...a.document!,
+      class_id: a.class_id,
+      assessment_id: a.assessment_id,
+    }));
   }
 
   async updateAssignment(id: number, dto: UpdateAssignmentDto) {
@@ -84,6 +143,12 @@ export class AssignmentService {
       throw new NotFoundException('Assignment not found');
     }
 
+    // Delete assessment records first
+    await this.prisma.assessment.deleteMany({
+      where: { doc_id: id },
+    });
+
+    // Then delete document
     await this.prisma.document.delete({
       where: { doc_id: id },
     });

@@ -118,6 +118,13 @@ export class ErrorResponseDto {
   error?: string;
 
   @ApiProperty({
+    description: 'Validation error details',
+    example: [{ field: 'classId', message: 'classId must be a number' }],
+    required: false,
+  })
+  validationErrors?: Array<{ field: string; message: string }>;
+
+  @ApiProperty({
     description: 'Timestamp of the error',
     example: '2026-01-25T11:48:00.000Z',
   })
