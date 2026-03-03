@@ -86,24 +86,30 @@ export class AssignmentService {
   }
 
   async getAssignmentsByClassroom(classId: number) {
-    const assignments = await this.prisma.assessment.findMany({
+    // Get all assessments for this classroom with their documents
+    const assessments = await this.prisma.assessment.findMany({
       where: {
         class_id: classId,
-        document: {
-          doc_type: 'ASSIGNMENT',
-        },
       },
       include: {
         document: true,
       },
-      orderBy: { due_date: 'desc' },
     });
 
-    return assignments.map((a) => ({
-      ...a.document!,
-      class_id: a.class_id,
-      assessment_id: a.assessment_id,
-    }));
+    // Filter to only ASSIGNMENT type documents and return enriched data
+    return assessments
+      .filter((a) => a.document?.doc_type === 'ASSIGNMENT')
+      .sort((a, b) => {
+        // Sort by due_date descending, fallback to updated_at
+        const aDate = a.due_date || a.document?.updated_at || new Date(0);
+        const bDate = b.due_date || b.document?.updated_at || new Date(0);
+        return new Date(bDate).getTime() - new Date(aDate).getTime();
+      })
+      .map((a) => ({
+        ...a.document!,
+        class_id: a.class_id,
+        assessment_id: a.assessment_id,
+      }));
   }
 
   async updateAssignment(id: number, dto: UpdateAssignmentDto) {
