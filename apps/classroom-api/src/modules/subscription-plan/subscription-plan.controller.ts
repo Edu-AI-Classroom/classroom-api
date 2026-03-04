@@ -18,7 +18,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Roles } from '../auth/decorators/public.decorator';
+import { Public, Roles } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CreateSubscriptionPlanDto } from './dtos/create-subscription-plan.dto';
@@ -27,13 +27,13 @@ import { SubscriptionPlanService } from './subscription-plan.service';
 
 @ApiTags('Subscription Plans')
 @Controller('subscription-plans')
-@ApiBearerAuth('JWT-auth')
 export class SubscriptionPlanController {
   constructor(
     private readonly subscriptionPlanService: SubscriptionPlanService,
   ) {}
 
   @Post()
+  @ApiBearerAuth('JWT-auth')
   @Roles('ADMIN')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Tạo gói subscription mới' })
@@ -45,6 +45,7 @@ export class SubscriptionPlanController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Danh sách gói subscription' })
   @ApiQuery({
     name: 'activeOnly',
@@ -61,6 +62,7 @@ export class SubscriptionPlanController {
 
   // Đổi parameter từ :code thành :sub_code cho đồng bộ với DB
   @Get('by-code/:sub_code')
+  @Public()
   @ApiOperation({ summary: 'Lấy gói theo mã định danh (sub_code)' })
   @ApiResponse({ status: 200, description: 'Chi tiết gói' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy' })
@@ -69,6 +71,7 @@ export class SubscriptionPlanController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Chi tiết gói theo ID' })
   @ApiResponse({ status: 200, description: 'Chi tiết gói' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy' })
@@ -77,6 +80,7 @@ export class SubscriptionPlanController {
   }
 
   @Put(':id')
+  @ApiBearerAuth('JWT-auth')
   @Roles('ADMIN')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Cập nhật gói subscription' })
@@ -90,6 +94,7 @@ export class SubscriptionPlanController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth('JWT-auth')
   @Roles('ADMIN')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Xóa gói subscription' })
