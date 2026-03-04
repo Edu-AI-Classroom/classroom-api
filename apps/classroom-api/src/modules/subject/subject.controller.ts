@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus } from '@nestjs/common';
+import { Controller, Get, HttpStatus, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -8,12 +8,15 @@ import {
 
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { Roles } from '../auth/decorators/public.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { SubjectResponseDto } from './dto/subject-response.dto';
 import { SubjectService } from './subject.service';
 
 @ApiTags('Subjects')
 @ApiBearerAuth('JWT-auth')
 @Controller('subjects')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class SubjectController {
   constructor(private readonly subjectService: SubjectService) {}
 
