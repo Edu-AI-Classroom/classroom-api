@@ -60,6 +60,7 @@ export class TransactionService {
           payment_gateway: dto.payment_gateway,
           note: dto.note || '',
           sub_code: subscriptionPlan.sub_code,
+          status: 'PENDING',
         },
       });
 
@@ -321,7 +322,9 @@ export class TransactionService {
           this.prisma.transaction.update({
             where: { transaction_id: transaction.transaction_id },
             data: {
+              status: 'COMPLETED',
               note: transactionNote,
+              updated_at: new Date(),
             },
           }),
           this.updateUserCredit(transaction.user_id, amount),
@@ -330,21 +333,47 @@ export class TransactionService {
         this.logger.log(
           `💰 Payment completed for transaction ${transaction.transaction_id}`,
         );
-      } else if (
-        status === PayOSPaymentStatus.CANCELLED ||
-        status === PayOSPaymentStatus.FAILED ||
-        status === PayOSPaymentStatus.EXPIRED
-      ) {
+      } else if (status === PayOSPaymentStatus.CANCELLED) {
         // Update transaction status
         await this.prisma.transaction.update({
           where: { transaction_id: transaction.transaction_id },
           data: {
+            status: 'CANCELLED',
             note: transactionNote,
+            updated_at: new Date(),
           },
         });
 
         this.logger.log(
-          `⚠️  Payment ${status.toLowerCase()} for transaction ${transaction.transaction_id}`,
+          `⚠️  Payment cancelled for transaction ${transaction.transaction_id}`,
+        );
+      } else if (status === PayOSPaymentStatus.FAILED) {
+        // Update transaction status
+        await this.prisma.transaction.update({
+          where: { transaction_id: transaction.transaction_id },
+          data: {
+            status: 'FAILED',
+            note: transactionNote,
+            updated_at: new Date(),
+          },
+        });
+
+        this.logger.log(
+          `❌ Payment failed for transaction ${transaction.transaction_id}`,
+        );
+      } else if (status === PayOSPaymentStatus.EXPIRED) {
+        // Update transaction status
+        await this.prisma.transaction.update({
+          where: { transaction_id: transaction.transaction_id },
+          data: {
+            status: 'EXPIRED',
+            note: transactionNote,
+            updated_at: new Date(),
+          },
+        });
+
+        this.logger.log(
+          `⏰ Payment expired for transaction ${transaction.transaction_id}`,
         );
       }
 
