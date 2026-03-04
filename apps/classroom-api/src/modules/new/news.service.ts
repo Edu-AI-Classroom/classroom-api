@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { R2Service } from '../../infrastructure/cloudflare_r2/r2.service'; // Giữ nguyên path của bạn
+import { R2Service } from '../../infrastructure/cloudflare_r2/r2.service';
 import { CreateNewsDto } from './dto/create-news.dto';
 import { UpdateNewsDto } from './dto/update-news.dto';
 import { NewsResponseDto } from './dto/news-response.dto';
@@ -38,8 +38,12 @@ export class NewsService {
     // 3. Save to DB
     const news = await this.prisma.news.create({
       data: {
-        class_id: classId,
-        user_post_id: userId,
+        classroom: {
+          connect:  { id: classId }
+        },
+        user_post: {
+          connect: { user_id: userId },
+        },
         content: content,
         audience: audience || 'all',
         is_pinned: isPinned || false,
