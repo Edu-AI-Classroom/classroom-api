@@ -412,7 +412,6 @@ model transaction {
   order_code       String?   @unique @db.VarChar(50)
   sub_code         String?   @db.VarChar(50)
   status           String?   @default("PENDING") @db.VarChar(50)
-  created_at       DateTime? @default(now()) @db.Timestamp(6)
   updated_at       DateTime? @db.Timestamp(6)
   USER             USER?     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 }
