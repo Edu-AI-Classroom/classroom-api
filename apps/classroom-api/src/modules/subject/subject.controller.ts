@@ -1,27 +1,18 @@
-import { Controller, Get, HttpStatus, UseGuards } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Controller, Get, HttpStatus } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
-import { Roles } from '../auth/decorators/public.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
+import { Public } from '../auth/decorators/public.decorator';
 import { SubjectResponseDto } from './dto/subject-response.dto';
 import { SubjectService } from './subject.service';
 
 @ApiTags('Subjects')
-@ApiBearerAuth('JWT-auth')
 @Controller('subjects')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class SubjectController {
   constructor(private readonly subjectService: SubjectService) {}
 
   @Get()
-  @Roles('TEACHER', 'STUDENT', 'ADMIN')
+  @Public()
   @ApiOperation({ summary: 'Get all subjects' })
   @ApiResponse({
     status: 200,
