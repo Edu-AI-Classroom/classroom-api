@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { R2Service } from '../../infrastructure/cloudflare_r2/r2.service'; // Adjust path
+import { R2Service } from '../../infrastructure/cloudflare_r2/r2.service'; // Giữ nguyên path của bạn
 import { CreateNewsDto } from './dto/create-news.dto';
 import { UpdateNewsDto } from './dto/update-news.dto';
 import { NewsResponseDto } from './dto/news-response.dto';
@@ -23,12 +23,13 @@ export class NewsService {
     createNewsDto: CreateNewsDto,
     file?: Express.Multer.File,
   ): Promise<NewsResponseDto> {
-    const { class_id, title, content, status } = createNewsDto;
+    // Sử dụng camelCase từ DTO mới
+    const { classId, content, audience, isPinned } = createNewsDto;
 
-    // 1. Verify access (User must be a Teacher or Admin in this class)
-    await this.verifyTeacherAccess(userId, class_id);
+    // 1. Verify access
+    await this.verifyTeacherAccess(userId, classId);
 
-    // 2. Handle File Upload
+    // 2. Handle File Upload với R2Service
     let mediaUrl = null;
     if (file) {
       mediaUrl = await this.r2Service.uploadFile(file);
@@ -37,16 +38,18 @@ export class NewsService {
     // 3. Save to DB
     const news = await this.prisma.news.create({
       data: {
-        class_id,
+        class_id: classId,
         user_post_id: userId,
-        title,
-        content,
-        status: status || 'PUBLISHED',
+        content: content,
+        audience: audience || 'all',
+        is_pinned: isPinned || false,
+        status: 'PUBLISHED',
         media_url: mediaUrl,
         uploaded_at: new Date(),
       },
       include: {
-        user_post: true, // To get author name
+        user_post: true, // Lấy tên tác giả
+        comments: { include: { user: true } }, // Lấy sẵn mảng comments (dù lúc tạo mới là mảng rỗng)
       },
     });
 
@@ -65,7 +68,6 @@ export class NewsService {
     const { page = 1, limit = 10 } = paginationDto;
     const skip = (page - 1) * limit;
 
-    // Check if class exists
     const classroom = await this.prisma.classroom.findUnique({
       where: { class_id: classId },
     });
@@ -74,8 +76,17 @@ export class NewsService {
     const [newsList, total] = await Promise.all([
       this.prisma.news.findMany({
         where: { class_id: classId },
-        include: { user_post: true },
-        orderBy: { uploaded_at: 'desc' },
+        include: {
+          user_post: true,
+          comments: {
+            include: { user: true }, // Include user để lấy role và name cho comment
+            orderBy: { uploaded_at: 'asc' }, // Comment cũ xếp trên
+          },
+        },
+        orderBy: [
+          { is_pinned: 'desc' }, // Bài ghim luôn lên đầu
+          { uploaded_at: 'desc' }, // Sau đó mới ưu tiên bài mới nhất
+        ],
         skip,
         take: limit,
       }),
@@ -93,7 +104,13 @@ export class NewsService {
   async findOne(newsId: number): Promise<NewsResponseDto> {
     const news = await this.prisma.news.findUnique({
       where: { news_id: newsId },
-      include: { user_post: true },
+      include: {
+        user_post: true,
+        comments: {
+          include: { user: true },
+          orderBy: { uploaded_at: 'asc' },
+        },
+      },
     });
 
     if (!news) throw new NotFoundException(`News with ID ${newsId} not found`);
@@ -112,9 +129,7 @@ export class NewsService {
     });
     if (!news) throw new NotFoundException('News not found');
 
-    // Verify ownership or permission
     if (news.user_post_id !== userId) {
-      // Optional: Allow class owner to edit any post? For now, strict ownership.
       throw new ForbiddenException('You can only edit your own posts');
     }
 
@@ -126,13 +141,16 @@ export class NewsService {
     const updatedNews = await this.prisma.news.update({
       where: { news_id: newsId },
       data: {
-        title: updateNewsDto.title,
         content: updateNewsDto.content,
-        status: updateNewsDto.status,
+        audience: updateNewsDto.audience,
+        is_pinned: updateNewsDto.isPinned,
         media_url: mediaUrl,
         updated_at: new Date(),
       },
-      include: { user_post: true },
+      include: {
+        user_post: true,
+        comments: { include: { user: true }, orderBy: { uploaded_at: 'asc' } },
+      },
     });
 
     return this.mapToResponse(updatedNews);
@@ -154,7 +172,6 @@ export class NewsService {
   // --- Helpers ---
 
   private async verifyTeacherAccess(userId: number, classId: number) {
-    // Check if user is a teacher in this class or the creator
     const classroom = await this.prisma.classroom.findFirst({
       where: {
         class_id: classId,
@@ -173,17 +190,28 @@ export class NewsService {
     }
   }
 
-  private mapToResponse(news: any): NewsResponseDto {
+  // Mapper được thiết kế lại hoàn toàn để khớp 100% với Frontend Interface
+  private mapToResponse(news: any): any {
     return {
-      newsId: news.news_id,
-      classId: news.class_id,
-      title: news.title,
-      content: news.content,
+      id: news.news_id.toString(), // Frontend cần ID dạng string
+      author: news.user_post?.user_name || 'Unknown',
+      content: news.content || '',
+      createdAt: news.uploaded_at?.toISOString(),
+      isPinned: news.is_pinned || false,
+      audience: news.audience || 'all',
       mediaUrl: news.media_url,
-      status: news.status,
-      authorName: news.user_post?.user_name || 'Unknown',
-      uploadedAt: news.uploaded_at?.toISOString(),
-      updatedAt: news.updated_at?.toISOString(),
+      commentCount: news.comments?.length || 0,
+      comments:
+        news.comments?.map((c: any) => ({
+          id: c.comment_id.toString(),
+          author: c.user?.user_name || 'Unknown',
+          authorRole: (c.user?.role?.toLowerCase() || 'student') as
+            | 'teacher'
+            | 'student'
+            | 'parent',
+          content: c.content,
+          createdAt: c.uploaded_at?.toISOString(),
+        })) || [],
     };
   }
 }
