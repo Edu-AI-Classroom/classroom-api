@@ -54,7 +54,10 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.validateUser(dto);
     if (!user) {
-      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+      throw new UnauthorizedException({
+        message: 'Email hoặc mật khẩu không đúng',
+        error: 'INVALID_CREDENTIALS',
+      });
     }
 
     const payload: JwtPayload = { sub: user.userId, email: user.email };

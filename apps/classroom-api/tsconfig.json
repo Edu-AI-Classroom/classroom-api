@@ -11,6 +11,13 @@
     }
   ],
   "compilerOptions": {
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"],
+      "@shared/*": ["src/shared/*"],
+      "@common/*": ["src/common/*"],
+      "@infrastructure/*": ["src/infrastructure/*"]
+    }
   }
 }
