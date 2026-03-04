@@ -39,11 +39,12 @@ export class NewsService {
     const news = await this.prisma.news.create({
       data: {
         classroom: {
-          connect:  { id: classId }
+          connect: { class_id: classId },
         },
         user_post: {
           connect: { user_id: userId },
         },
+        title: 'Announcement',
         content: content,
         audience: audience || 'all',
         is_pinned: isPinned || false,
