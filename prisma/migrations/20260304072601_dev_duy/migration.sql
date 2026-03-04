@@ -99,6 +99,18 @@ CREATE TABLE "book_section" (
 );
 
 -- CreateTable
+CREATE TABLE "class_group" (
+    "group_id" SERIAL NOT NULL,
+    "class_id" INTEGER NOT NULL,
+    "group_name" VARCHAR(255) NOT NULL,
+    "created_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(6),
+    "is_deleted" BOOLEAN DEFAULT false,
+
+    CONSTRAINT "class_group_pkey" PRIMARY KEY ("group_id")
+);
+
+-- CreateTable
 CREATE TABLE "class_student" (
     "class_id" INTEGER NOT NULL,
     "student_id" INTEGER NOT NULL,
@@ -119,37 +131,6 @@ CREATE TABLE "classroom" (
     "is_deleted" BOOLEAN DEFAULT false,
 
     CONSTRAINT "classroom_pkey" PRIMARY KEY ("class_id")
-);
-
--- CreateTable
-CREATE TABLE "teacher_classroom" (
-    "teacher_id" INTEGER NOT NULL,
-    "class_id" INTEGER NOT NULL,
-    "added_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-    "is_owner" BOOLEAN NOT NULL DEFAULT false,
-
-    CONSTRAINT "teacher_classroom_pkey" PRIMARY KEY ("teacher_id","class_id")
-);
-
--- CreateTable
-CREATE TABLE "class_group" (
-    "group_id" SERIAL NOT NULL,
-    "class_id" INTEGER NOT NULL,
-    "group_name" VARCHAR(255) NOT NULL,
-    "created_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(6),
-    "is_deleted" BOOLEAN DEFAULT false,
-
-    CONSTRAINT "class_group_pkey" PRIMARY KEY ("group_id")
-);
-
--- CreateTable
-CREATE TABLE "group_student" (
-    "group_id" INTEGER NOT NULL,
-    "student_id" INTEGER NOT NULL,
-    "joined_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "group_student_pkey" PRIMARY KEY ("group_id","student_id")
 );
 
 -- CreateTable
@@ -200,6 +181,8 @@ CREATE TABLE "document" (
     "updated_at" TIMESTAMP(6),
     "owner_id" INTEGER,
     "current_ver_id" INTEGER,
+    "class_id" INTEGER,
+    "created_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "document_pkey" PRIMARY KEY ("doc_id")
 );
@@ -213,6 +196,15 @@ CREATE TABLE "document_version" (
     "created_at" TIMESTAMP(6),
 
     CONSTRAINT "document_version_pkey" PRIMARY KEY ("ver_id")
+);
+
+-- CreateTable
+CREATE TABLE "group_student" (
+    "group_id" INTEGER NOT NULL,
+    "student_id" INTEGER NOT NULL,
+    "joined_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "group_student_pkey" PRIMARY KEY ("group_id","student_id")
 );
 
 -- CreateTable
@@ -283,22 +275,9 @@ CREATE TABLE "personal_info" (
     "dob" DATE,
     "sub_start_date" TIMESTAMP(6),
     "sub_status" VARCHAR(50),
+    "sub_id" INTEGER,
 
     CONSTRAINT "personal_info_pkey" PRIMARY KEY ("user_id")
-);
-
--- CreateTable
-CREATE TABLE "teacher" (
-    "teacher_id" INTEGER NOT NULL,
-    "specialization" VARCHAR(255),
-    "department" VARCHAR(255),
-    "qualification" VARCHAR(255),
-    "experience_years" INTEGER,
-    "is_verified" BOOLEAN DEFAULT false,
-    "created_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(6),
-
-    CONSTRAINT "teacher_pkey" PRIMARY KEY ("teacher_id")
 );
 
 -- CreateTable
@@ -369,6 +348,46 @@ CREATE TABLE "submission_ans" (
 );
 
 -- CreateTable
+CREATE TABLE "subscription_plan" (
+    "sub_id" SERIAL NOT NULL,
+    "sub_code" VARCHAR(50) NOT NULL,
+    "sub_name" VARCHAR(255) NOT NULL,
+    "price" DECIMAL(10,2) DEFAULT 0,
+    "duration_days" INTEGER,
+    "ai_token_limit" INTEGER,
+    "ai_request_limit" INTEGER,
+    "max_classes" INTEGER,
+    "max_documents" INTEGER,
+    "is_active" BOOLEAN DEFAULT true,
+
+    CONSTRAINT "subscription_plan_pkey" PRIMARY KEY ("sub_id")
+);
+
+-- CreateTable
+CREATE TABLE "teacher" (
+    "teacher_id" INTEGER NOT NULL,
+    "specialization" VARCHAR(255),
+    "department" VARCHAR(255),
+    "qualification" VARCHAR(255),
+    "experience_years" INTEGER,
+    "is_verified" BOOLEAN DEFAULT false,
+    "created_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(6),
+
+    CONSTRAINT "teacher_pkey" PRIMARY KEY ("teacher_id")
+);
+
+-- CreateTable
+CREATE TABLE "teacher_classroom" (
+    "teacher_id" INTEGER NOT NULL,
+    "class_id" INTEGER NOT NULL,
+    "added_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    "is_owner" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "teacher_classroom_pkey" PRIMARY KEY ("teacher_id","class_id")
+);
+
+-- CreateTable
 CREATE TABLE "transaction" (
     "transaction_id" SERIAL NOT NULL,
     "user_id" INTEGER,
@@ -377,8 +396,42 @@ CREATE TABLE "transaction" (
     "amount" DECIMAL(10,2),
     "note" TEXT,
     "created_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    "order_code" VARCHAR(50),
+    "sub_code" VARCHAR(50),
 
     CONSTRAINT "transaction_pkey" PRIMARY KEY ("transaction_id")
+);
+
+-- CreateTable
+CREATE TABLE "news" (
+    "news_id" SERIAL NOT NULL,
+    "class_id" INTEGER NOT NULL,
+    "user_post_id" INTEGER,
+    "title" VARCHAR(255) NOT NULL,
+    "content" TEXT,
+    "status" VARCHAR(50),
+    "uploaded_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(6),
+    "approved_by" INTEGER,
+    "approved_at" TIMESTAMP(6),
+    "audience" VARCHAR(50) DEFAULT 'all',
+    "is_pinned" BOOLEAN DEFAULT false,
+    "media_url" VARCHAR(255),
+
+    CONSTRAINT "news_pkey" PRIMARY KEY ("news_id")
+);
+
+-- CreateTable
+CREATE TABLE "comment" (
+    "comment_id" SERIAL NOT NULL,
+    "parent_comment_id" INTEGER,
+    "news_id" INTEGER NOT NULL,
+    "user_id" INTEGER NOT NULL,
+    "content" TEXT NOT NULL,
+    "uploaded_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(6),
+
+    CONSTRAINT "comment_pkey" PRIMARY KEY ("comment_id")
 );
 
 -- CreateIndex
@@ -386,6 +439,12 @@ CREATE UNIQUE INDEX "USER_email_key" ON "USER"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "class_group_class_id_group_name_key" ON "class_group"("class_id", "group_name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "subscription_plan_sub_code_key" ON "subscription_plan"("sub_code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "transaction_order_code_key" ON "transaction"("order_code");
 
 -- AddForeignKey
 ALTER TABLE "answer_key" ADD CONSTRAINT "answer_key_gen_block_id_fkey" FOREIGN KEY ("gen_block_id") REFERENCES "layout_block"("block_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
@@ -406,31 +465,19 @@ ALTER TABLE "book" ADD CONSTRAINT "book_subject_id_fkey" FOREIGN KEY ("subject_i
 ALTER TABLE "book_section" ADD CONSTRAINT "book_section_book_id_fkey" FOREIGN KEY ("book_id") REFERENCES "book"("book_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
+ALTER TABLE "class_group" ADD CONSTRAINT "class_group_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classroom"("class_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- AddForeignKey
 ALTER TABLE "class_student" ADD CONSTRAINT "class_student_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classroom"("class_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
 ALTER TABLE "class_student" ADD CONSTRAINT "class_student_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "student"("student_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "classroom" ADD CONSTRAINT "classroom_subject_id_fkey" FOREIGN KEY ("subject_id") REFERENCES "subject"("subject_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
-
--- AddForeignKey
 ALTER TABLE "classroom" ADD CONSTRAINT "classroom_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "teacher_classroom" ADD CONSTRAINT "teacher_classroom_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classroom"("class_id") ON DELETE CASCADE ON UPDATE NO ACTION;
-
--- AddForeignKey
-ALTER TABLE "teacher_classroom" ADD CONSTRAINT "teacher_classroom_teacher_id_fkey" FOREIGN KEY ("teacher_id") REFERENCES "USER"("user_id") ON DELETE CASCADE ON UPDATE NO ACTION;
-
--- AddForeignKey
-ALTER TABLE "class_group" ADD CONSTRAINT "class_group_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classroom"("class_id") ON DELETE CASCADE ON UPDATE NO ACTION;
-
--- AddForeignKey
-ALTER TABLE "group_student" ADD CONSTRAINT "group_student_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "class_group"("group_id") ON DELETE CASCADE ON UPDATE NO ACTION;
-
--- AddForeignKey
-ALTER TABLE "group_student" ADD CONSTRAINT "group_student_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "student"("student_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "classroom" ADD CONSTRAINT "classroom_subject_id_fkey" FOREIGN KEY ("subject_id") REFERENCES "subject"("subject_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
 ALTER TABLE "content_bank" ADD CONSTRAINT "content_bank_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
@@ -440,6 +487,9 @@ ALTER TABLE "content_bank" ADD CONSTRAINT "content_bank_subject_id_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "content_block" ADD CONSTRAINT "content_block_block_id_fkey" FOREIGN KEY ("block_id") REFERENCES "layout_block"("block_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "document" ADD CONSTRAINT "document_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classroom"("class_id") ON DELETE SET NULL ON UPDATE NO ACTION;
 
 -- AddForeignKey
 ALTER TABLE "document" ADD CONSTRAINT "document_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
@@ -454,16 +504,22 @@ ALTER TABLE "document" ADD CONSTRAINT "fk_doc_current_version" FOREIGN KEY ("cur
 ALTER TABLE "document_version" ADD CONSTRAINT "document_version_doc_id_fkey" FOREIGN KEY ("doc_id") REFERENCES "document"("doc_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
+ALTER TABLE "group_student" ADD CONSTRAINT "group_student_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "class_group"("group_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "group_student" ADD CONSTRAINT "group_student_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "student"("student_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- AddForeignKey
 ALTER TABLE "knowledge_unit" ADD CONSTRAINT "knowledge_unit_section_id_fkey" FOREIGN KEY ("section_id") REFERENCES "book_section"("section_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
 ALTER TABLE "layout_block" ADD CONSTRAINT "layout_block_ver_id_fkey" FOREIGN KEY ("ver_id") REFERENCES "document_version"("ver_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "personal_info" ADD CONSTRAINT "personal_info_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE "personal_info" ADD CONSTRAINT "fk_personal_sub" FOREIGN KEY ("sub_id") REFERENCES "subscription_plan"("sub_id") ON DELETE SET NULL ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "teacher" ADD CONSTRAINT "teacher_teacher_id_fkey" FOREIGN KEY ("teacher_id") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE "personal_info" ADD CONSTRAINT "personal_info_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
 ALTER TABLE "student" ADD CONSTRAINT "student_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
@@ -493,69 +549,31 @@ ALTER TABLE "submission_ans" ADD CONSTRAINT "submission_ans_attempt_id_fkey" FOR
 ALTER TABLE "submission_ans" ADD CONSTRAINT "submission_ans_gen_block_id_fkey" FOREIGN KEY ("gen_block_id") REFERENCES "layout_block"("block_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
+ALTER TABLE "teacher" ADD CONSTRAINT "teacher_teacher_id_fkey" FOREIGN KEY ("teacher_id") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "teacher_classroom" ADD CONSTRAINT "teacher_classroom_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classroom"("class_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "teacher_classroom" ADD CONSTRAINT "teacher_classroom_teacher_id_fkey" FOREIGN KEY ("teacher_id") REFERENCES "USER"("user_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- AddForeignKey
 ALTER TABLE "transaction" ADD CONSTRAINT "transaction_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
--- CreateTable
-CREATE TABLE "news" (
-    "news_id" SERIAL NOT NULL,
-    "class_id" INTEGER NOT NULL,
-    "user_post_id" INTEGER NOT NULL,
-    "title" VARCHAR(255) NOT NULL,
-    "content" TEXT,
-    "status" VARCHAR(50),
-    "uploaded_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(6),
-    "approved_by" INTEGER,
-    "approved_at" TIMESTAMP(6),
+-- AddForeignKey
+ALTER TABLE "news" ADD CONSTRAINT "news_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
-    CONSTRAINT "news_pkey" PRIMARY KEY ("news_id")
-);
+-- AddForeignKey
+ALTER TABLE "news" ADD CONSTRAINT "news_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "classroom"("class_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "news"
-ADD CONSTRAINT "news_class_id_fkey"
-FOREIGN KEY ("class_id")
-REFERENCES "classroom"("class_id")
-ON DELETE CASCADE;
+-- AddForeignKey
+ALTER TABLE "news" ADD CONSTRAINT "news_user_post_id_fkey" FOREIGN KEY ("user_post_id") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
-ALTER TABLE "news"
-ADD CONSTRAINT "news_user_post_id_fkey"
-FOREIGN KEY ("user_post_id")
-REFERENCES "USER"("user_id")
-ON DELETE NO ACTION;
+-- AddForeignKey
+ALTER TABLE "comment" ADD CONSTRAINT "comment_news_id_fkey" FOREIGN KEY ("news_id") REFERENCES "news"("news_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "news"
-ADD CONSTRAINT "news_approved_by_fkey"
-FOREIGN KEY ("approved_by")
-REFERENCES "USER"("user_id")
-ON DELETE NO ACTION;
+-- AddForeignKey
+ALTER TABLE "comment" ADD CONSTRAINT "comment_parent_comment_id_fkey" FOREIGN KEY ("parent_comment_id") REFERENCES "comment"("comment_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- CreateTable
-CREATE TABLE "comment" (
-    "comment_id" SERIAL NOT NULL,
-    "parent_comment_id" INTEGER,
-    "news_id" INTEGER NOT NULL,
-    "user_id" INTEGER NOT NULL,
-    "content" TEXT NOT NULL,
-    "uploaded_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(6),
-
-    CONSTRAINT "comment_pkey" PRIMARY KEY ("comment_id")
-);
-
-ALTER TABLE "comment"
-ADD CONSTRAINT "comment_news_id_fkey"
-FOREIGN KEY ("news_id")
-REFERENCES "news"("news_id")
-ON DELETE CASCADE;
-
-ALTER TABLE "comment"
-ADD CONSTRAINT "comment_user_id_fkey"
-FOREIGN KEY ("user_id")
-REFERENCES "USER"("user_id")
-ON DELETE NO ACTION;
-
-ALTER TABLE "comment"
-ADD CONSTRAINT "comment_parent_comment_id_fkey"
-FOREIGN KEY ("parent_comment_id")
-REFERENCES "comment"("comment_id")
-ON DELETE CASCADE;
+-- AddForeignKey
+ALTER TABLE "comment" ADD CONSTRAINT "comment_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "USER"("user_id") ON DELETE NO ACTION ON UPDATE CASCADE;

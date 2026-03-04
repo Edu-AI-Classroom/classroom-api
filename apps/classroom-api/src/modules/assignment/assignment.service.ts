@@ -105,18 +105,22 @@ export class AssignmentService {
       .map((a) => this.transformDocumentToAssignment(a.document!));
   }
 
-  private transformDocumentToAssignment(doc: any) {
+  private transformDocumentToAssignment(doc: any): any {
     return {
       docId: doc.doc_id,
       docTitle: doc.doc_title,
       docType: doc.doc_type,
-      gradeLevel: doc.grade_level,
-      subjectId: doc.subject_id,
-      note: doc.note,
-      status: doc.status?.toLowerCase() || 'draft',
+      gradeLevel: doc.grade_level || null,
+      subjectId: doc.subject_id || null,
+      note: doc.note || null,
+      status: (doc.status || 'draft').toLowerCase(),
       ownerId: doc.owner_id,
-      createdAt: doc.created_at || new Date().toISOString(),
-      updatedAt: doc.updated_at || new Date().toISOString(),
+      createdAt: doc.created_at
+        ? new Date(doc.created_at).toISOString()
+        : new Date().toISOString(),
+      updatedAt: doc.updated_at
+        ? new Date(doc.updated_at).toISOString()
+        : new Date().toISOString(),
     };
   }
 
