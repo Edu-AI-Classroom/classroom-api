@@ -15,6 +15,7 @@ import { AssignmentModule } from '@/modules/assignment/assignment.module';
 import { R2Module } from '../infrastructure/cloudflare_r2/r2.module';
 import { CommentsModule } from '../modules/comment/comments.module';
 import { NewsModule } from '../modules/new/news.module';
+import { SubjectModule } from '../modules/subject/subject.module';
 import { SubscriptionPlanModule } from '../modules/subscription-plan/subscription-plan.module';
 import { TransactionModule } from '../modules/transaction/transaction.module';
 import { UsersModule } from '../modules/users/users.module';
@@ -46,6 +47,7 @@ import { UsersModule } from '../modules/users/users.module';
     CommentsModule,
     R2Module,
     AssignmentModule,
+    SubjectModule,
   ],
   controllers: [],
 })
