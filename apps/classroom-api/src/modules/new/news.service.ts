@@ -38,8 +38,12 @@ export class NewsService {
     // 3. Save to DB
     const news = await this.prisma.news.create({
       data: {
-        class_id: classId,
-        user_post_id: userId,
+        classroom: {
+          connect: { class_id: classId },
+        },
+        user_post: {
+          connect: { user_id: userId },
+        },
         content: content,
         audience: audience || 'all',
         is_pinned: isPinned || false,
@@ -48,8 +52,8 @@ export class NewsService {
         uploaded_at: new Date(),
       },
       include: {
-        user_post: true, // Lấy tên tác giả
-        comments: { include: { user: true } }, // Lấy sẵn mảng comments (dù lúc tạo mới là mảng rỗng)
+        user_post: true,
+        comments: { include: { user: true } },
       },
     });
 
@@ -185,7 +189,7 @@ export class NewsService {
 
     if (!classroom) {
       throw new ForbiddenException(
-        'You do not have permission to post news in this class',
+        `You do not have permission to post news in this class ${classId} ${userId}`,
       );
     }
   }
