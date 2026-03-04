@@ -86,7 +86,7 @@ export class NewsController {
   }
 
   @Get('class/:classId')
-  @Roles('TEACHER', 'STUDENT')
+  @Roles('TEACHER', 'STUDENT', 'ADMIN')
   @ApiOperation({ summary: 'Get all news for a specific classroom' })
   @ApiParam({ name: 'classId', example: 1 })
   async findAll(
@@ -122,7 +122,7 @@ export class NewsController {
   }
 
   @Put(':id')
-  @Roles('TEACHER', 'ADMIN')
+  @Roles('TEACHER', 'STUDENT', 'ADMIN')
   @ApiOperation({ summary: 'Update a news post' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
@@ -153,7 +153,7 @@ export class NewsController {
   }
 
   @Delete(':id')
-  @Roles('TEACHER')
+  @Roles('TEACHER', 'STUDENT', 'ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a news post' })
   async remove(

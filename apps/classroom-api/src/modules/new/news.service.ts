@@ -185,7 +185,7 @@ export class NewsService {
 
     if (!classroom) {
       throw new ForbiddenException(
-        'You do not have permission to post news in this class',
+        `You do not have permission to post news in this class ${classId} ${userId}`,
       );
     }
   }
