@@ -106,12 +106,8 @@ export class TransactionService {
         orderCode,
         amount: dto.amount,
         description: shortDesc,
-        returnUrl:
-          dto.return_url ||
-          `${process.env.PAYOS_RETURN_URL || 'http://localhost:3000'}/payment-success`,
-        cancelUrl:
-          dto.cancel_url ||
-          `${process.env.PAYOS_CANCEL_URL || 'http://localhost:3000'}/payment-cancel`,
+        returnUrl: dto.return_url || process.env.PAYOS_RETURN_URL,
+        cancelUrl: dto.cancel_url || process.env.PAYOS_CANCEL_URL,
         buyerName: user.user_name,
         buyerEmail: user.email,
       });
