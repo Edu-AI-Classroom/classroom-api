@@ -48,7 +48,7 @@ jobs:
 
       # Prisma generate (safe)
       - name: Prisma generate
-        run: pnpm exec prisma generate --schema=classroom-api/prisma/schema.prisma
+        run: pnpm exec prisma generate
 
       # NX affected for PR
       - name: Nx affected (PR)
