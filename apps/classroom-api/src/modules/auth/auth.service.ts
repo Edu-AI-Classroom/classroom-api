@@ -94,16 +94,38 @@ export class AuthService {
     }
 
     const password_hash = await bcrypt.hash(dto.password, SALT_ROUNDS);
-    const created = await prisma.uSER.create({
-      data: {
-        user_name: dto.name,
-        email: dto.email,
-        password_hash,
-        role: dto.role ?? 'STUDENT',
-        profile_picture: null,
-        is_active: true,
-        credit: 0,
-      },
+    const role = dto.role ?? 'STUDENT';
+
+    const created = await prisma.$transaction(async (tx: any) => {
+      const userCreated = await tx.uSER.create({
+        data: {
+          user_name: dto.name,
+          email: dto.email,
+          password_hash,
+          role,
+          profile_picture: null,
+          is_active: true,
+          credit: 0,
+        },
+      });
+
+      if (role === 'STUDENT') {
+        await tx.student.create({
+          data: {
+            student_id: userCreated.user_id,
+          },
+        });
+      }
+
+      if (role === 'TEACHER') {
+        await tx.teacher.create({
+          data: {
+            teacher_id: userCreated.user_id,
+          },
+        });
+      }
+
+      return userCreated;
     });
 
     const user = this.mapToAuthUser(created);
