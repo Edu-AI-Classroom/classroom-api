@@ -99,7 +99,7 @@ export class AuthService {
         user_name: dto.name,
         email: dto.email,
         password_hash,
-        role: null,
+        role: dto.role ?? 'STUDENT',
         profile_picture: null,
         is_active: true,
         credit: 0,
