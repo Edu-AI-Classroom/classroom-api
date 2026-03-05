@@ -8,6 +8,7 @@ import {
 import { AuthService, AuthUser } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
+import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
@@ -24,6 +25,14 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Success' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Public()
+  @Post('register')
+  @ApiOperation({ summary: 'Đăng ký' })
+  @ApiResponse({ status: 201, description: 'Success' })
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
   }
 
   @Get('profile')
