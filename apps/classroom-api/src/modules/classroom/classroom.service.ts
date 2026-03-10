@@ -99,10 +99,11 @@ export class ClassroomService {
   }
 
   /**
-   * Get all classrooms for the current user
+   * Get all classrooms for the current user based on their role
    */
   async getMyClassrooms(
     userId: number,
+    role: string,
     paginationDto: PaginationDto,
   ): Promise<{
     data: ClassroomResponseDto[];
@@ -113,25 +114,41 @@ export class ClassroomService {
     const { page = 1, limit = 10 } = paginationDto;
     const skip = (page - 1) * limit;
 
-    const [classrooms, total] = await Promise.all([
-      this.prisma.classroom.findMany({
-        where: {
-          AND: [
-            { is_deleted: false },
+    // Build điều kiện where động dựa theo Role
+    const whereCondition: any = { is_deleted: false };
+
+    if (role === 'TEACHER' || role === 'ADMIN') {
+      whereCondition.AND = [
+        { is_deleted: false },
+        {
+          OR: [
+            { created_by: userId },
             {
-              OR: [
-                { created_by: userId },
-                {
-                  teacher_classroom: {
-                    some: {
-                      teacher_id: userId,
-                    },
-                  },
+              teacher_classroom: {
+                some: {
+                  teacher_id: userId,
                 },
-              ],
+              },
             },
           ],
         },
+      ];
+    } else if (role === 'STUDENT') {
+      whereCondition.AND = [
+        { is_deleted: false },
+        {
+          class_student: {
+            some: {
+              student_id: userId,
+            },
+          },
+        },
+      ];
+    }
+
+    const [classrooms, total] = await Promise.all([
+      this.prisma.classroom.findMany({
+        where: whereCondition,
         include: {
           subject: true,
           USER: true,
@@ -144,23 +161,7 @@ export class ClassroomService {
         orderBy: { created_at: 'desc' },
       }),
       this.prisma.classroom.count({
-        where: {
-          AND: [
-            { is_deleted: false },
-            {
-              OR: [
-                { created_by: userId },
-                {
-                  teacher_classroom: {
-                    some: {
-                      teacher_id: userId,
-                    },
-                  },
-                },
-              ],
-            },
-          ],
-        },
+        where: whereCondition,
       }),
     ]);
 
