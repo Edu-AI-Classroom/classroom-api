@@ -123,14 +123,15 @@ The owner has full permissions:
   }
 
   @Get()
-  @Roles('TEACHER')
+  @Roles('TEACHER', 'STUDENT') // Thêm quyền cho STUDENT có thể gọi API này
   @ApiOperation({
     summary: 'List my classrooms',
     description: `
-Get all classrooms where the authenticated user is a teacher.
+Get all classrooms where the authenticated user is a teacher or a student.
 This includes:
-- Classrooms created by the user (as owner)
+- Classrooms created by the user (as owner/teacher)
 - Classrooms where the user was added as a teacher
+- Classrooms where the user is enrolled as a student
 
 Results are paginated and sorted by creation date (newest first).
     `,
@@ -142,6 +143,7 @@ Results are paginated and sorted by creation date (newest first).
   async getMyClassrooms(
     @Query() paginationDto: PaginationDto,
     @CurrentUser('userId') userId: number,
+    @CurrentUser('role') role: string, // Lấy role từ JwtPayload đã được decode trong request
   ): Promise<
     ApiResponseDto<{
       data: ClassroomResponseDto[];
@@ -152,6 +154,7 @@ Results are paginated and sorted by creation date (newest first).
   > {
     const result = await this.classroomService.getMyClassrooms(
       userId,
+      role, // Truyền role xuống service
       paginationDto,
     );
     return {

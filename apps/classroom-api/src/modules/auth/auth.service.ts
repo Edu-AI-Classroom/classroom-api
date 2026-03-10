@@ -15,6 +15,7 @@ const SALT_ROUNDS = 10;
 export interface JwtPayload {
   sub: number;
   email: string;
+  role?: string | null;
 }
 
 export interface AuthUser {
@@ -67,7 +68,11 @@ export class AuthService {
       });
     }
 
-    const payload: JwtPayload = { sub: user.userId, email: user.email };
+    const payload: JwtPayload = {
+      sub: user.userId,
+      email: user.email,
+      role: user.role,
+    };
     const expiresIn =
       this.configService.get<string>('auth.jwt.expiresIn') || '7d';
     const access_token = this.jwtService.sign(payload, { expiresIn } as object);
@@ -129,7 +134,11 @@ export class AuthService {
     });
 
     const user = this.mapToAuthUser(created);
-    const payload: JwtPayload = { sub: user.userId, email: user.email };
+    const payload: JwtPayload = {
+      sub: user.userId,
+      email: user.email,
+      role: user.role,
+    };
     const expiresIn =
       this.configService.get<string>('auth.jwt.expiresIn') || '7d';
     const access_token = this.jwtService.sign(payload, { expiresIn } as object);
