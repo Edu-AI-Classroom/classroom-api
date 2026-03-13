@@ -1,0 +1,13 @@
+model student {
+  student_id   Int     @id
+  grade_level  Int?
+  parent_phone String? @db.VarChar(20)
+
+  USER               USER                 @relation(fields: [student_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  class_student      class_student[]
+  group_student      group_student[]
+  student_ku_state   student_ku_state[]
+  student_report     student_report[]
+  student_submission student_submission[]
+}
+

@@ -1,0 +1,17 @@
+model comment {
+  comment_id        Int      @id @default(autoincrement())
+  parent_comment_id Int?
+  news_id           Int
+  user_id           Int
+  content           String
+  uploaded_at       DateTime? @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @db.Timestamp(6)
+
+  news           news      @relation(fields: [news_id], references: [news_id], onDelete: Cascade)
+  parent_comment comment?  @relation("CommentToComment", fields: [parent_comment_id], references: [comment_id], onDelete: Cascade)
+  replies        comment[] @relation("CommentToComment")
+  user           USER      @relation(fields: [user_id], references: [user_id], onDelete: NoAction)
+
+  @@map("comment")
+}
+

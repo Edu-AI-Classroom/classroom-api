@@ -1,0 +1,38 @@
+model document {
+  id     String         @id @default(uuid()) @db.Char(36)
+  title  String         @db.VarChar(255)
+  type   DocumentType
+  status DocumentStatus @default(DRAFT)
+  note   String?        @db.Text
+
+  grade_level Int
+  subject_id  Int
+  owner_id    Int
+  class_id    Int?
+
+  // Khi document được PUBLISHED, set timestamp này
+  // Status = PUBLISHED → không cho phép sửa bất kỳ field nào
+  published_at DateTime? @db.Timestamp(6)
+
+  // Track document này được duplicate từ document nào
+  // NULL = tạo mới từ đầu
+  duplicated_from String? @db.Char(36)
+
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @db.Timestamp(6)
+
+  // Relations
+  owner           USER       @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  subject         subject    @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
+  classroom       classroom? @relation(fields: [class_id], references: [class_id], onDelete: NoAction, onUpdate: NoAction)
+  source_document document?  @relation("DocumentDuplicate", fields: [duplicated_from], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  duplicates      document[] @relation("DocumentDuplicate")
+
+  blocks      document_block[]
+  assessments assessment[]
+
+  @@index([owner_id])
+  @@index([class_id])
+  @@index([subject_id, grade_level])
+}
+

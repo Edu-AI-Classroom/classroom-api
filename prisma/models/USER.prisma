@@ -1,0 +1,27 @@
+model USER {
+  user_id         Int      @id @default(autoincrement())
+  user_name       String   @db.VarChar(255)
+  email           String   @unique @db.VarChar(255)
+  password_hash   String?  @db.VarChar(255)
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  updated_at      DateTime? @db.Timestamp(6)
+  is_active       Boolean?  @default(true)
+  profile_picture String?   @db.VarChar(500)
+  role            String?   @db.VarChar(50)
+  credit          Int?      @default(0)
+
+  // Relations
+  assessment        assessment[]
+  classroom         classroom[]
+  comments          comment[]
+  content_bank      content_bank[]
+  document          document[]
+  approved_news     news[]              @relation("ApprovedNews")
+  news_posts        news[]              @relation("UserPosts")
+  personal_info     personal_info?
+  student           student?
+  teacher           teacher?
+  teacher_classroom teacher_classroom[]
+  transaction       transaction[]
+}
+

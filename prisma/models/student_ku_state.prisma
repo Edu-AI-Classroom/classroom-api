@@ -1,0 +1,15 @@
+model student_ku_state {
+  student_id        Int
+  knowledge_unit_id Int
+  mastery           Decimal?  @db.Decimal(5, 2)
+  confidence        Decimal?  @db.Decimal(5, 2)
+  forgetting_rate   Decimal?  @db.Decimal(5, 2)
+  last_practiced    DateTime? @db.Timestamp(6)
+  updated_at        DateTime? @db.Timestamp(6)
+
+  knowledge_unit knowledge_unit @relation(fields: [knowledge_unit_id], references: [unit_id], onDelete: NoAction, onUpdate: NoAction)
+  student        student        @relation(fields: [student_id], references: [student_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([student_id, knowledge_unit_id])
+}
+

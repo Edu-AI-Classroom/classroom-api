@@ -1,0 +1,10 @@
+model subject {
+  subject_id   Int    @id @default(autoincrement())
+  subject_name String @db.VarChar(255)
+
+  book         book[]
+  classroom    classroom[]
+  content_bank content_bank[]
+  document     document[]
+}
+

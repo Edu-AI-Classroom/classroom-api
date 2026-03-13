@@ -1,0 +1,15 @@
+model subscription_plan {
+  sub_id           Int      @id @default(autoincrement())
+  sub_code         String   @unique @db.VarChar(50)
+  sub_name         String   @db.VarChar(255)
+  price            Decimal? @default(0) @db.Decimal(10, 2)
+  duration_days    Int?
+  ai_token_limit   Int?
+  ai_request_limit Int?
+  max_classes      Int?
+  max_documents    Int?
+  is_active        Boolean? @default(true)
+
+  personal_info personal_info[]
+}
+

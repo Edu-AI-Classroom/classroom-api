@@ -1,0 +1,11 @@
+model ku_reference {
+  knowledge_unit_id Int      @id
+  subject           String?  @db.VarChar(255)
+  grade_level       Int?
+  difficulty        Int?
+  cognitive_level   String?  @db.VarChar(50)
+  version           Int?
+  is_active         Boolean?
+  created_at        DateTime? @db.Timestamp(6)
+}
+
