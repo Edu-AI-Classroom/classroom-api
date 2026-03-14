@@ -128,6 +128,13 @@ export class ClassroomService {
                     },
                   },
                 },
+                {
+                  class_student: {
+                    some: {
+                      student_id: userId,
+                    },
+                  },
+                },
               ],
             },
           ],
@@ -154,6 +161,13 @@ export class ClassroomService {
                   teacher_classroom: {
                     some: {
                       teacher_id: userId,
+                    },
+                  },
+                },
+                {
+                  class_student: {
+                    some: {
+                      student_id: userId,
                     },
                   },
                 },
@@ -886,6 +900,13 @@ export class ClassroomService {
             teacher_classroom: {
               some: {
                 teacher_id: userId,
+              },
+            },
+          },
+          {
+            class_student: {
+              some: {
+                student_id: userId,
               },
             },
           },
