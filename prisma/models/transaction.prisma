@@ -1,0 +1,16 @@
+model transaction {
+  transaction_id   Int      @id @default(autoincrement())
+  user_id          Int?
+  payment_gateway  String?  @db.VarChar(50)
+  transaction_type String?  @db.VarChar(50)
+  amount           Decimal? @db.Decimal(10, 2)
+  note             String?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  order_code       String?   @unique @db.VarChar(50)
+  sub_code         String?   @db.VarChar(50)
+  status           String?   @default("PENDING") @db.VarChar(50)
+  updated_at       DateTime? @db.Timestamp(6)
+
+  USER USER? @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+

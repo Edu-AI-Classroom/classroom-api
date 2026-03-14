@@ -1,0 +1,15 @@
+model student_submission {
+  attempt_id    Int      @id @default(autoincrement())
+  assessment_id Int?
+  student_id    Int?
+  total_score   Decimal? @db.Decimal(5, 2)
+  status        String?  @db.VarChar(50)
+  feedback      String?
+  started_at    DateTime? @db.Timestamp(6)
+  submitted_at  DateTime? @db.Timestamp(6)
+
+  assessment     assessment?      @relation(fields: [assessment_id], references: [assessment_id], onDelete: NoAction, onUpdate: NoAction)
+  student        student?         @relation(fields: [student_id], references: [student_id], onDelete: NoAction, onUpdate: NoAction)
+  submission_ans submission_ans[]
+}
+

@@ -1,0 +1,12 @@
+model ai_audit_log {
+  log_id           String   @id @default(uuid()) @db.Char(36)
+  user_id          Int?
+  feature          String?  @db.VarChar(100)
+  created_at       DateTime? @db.Timestamp(6)
+  interaction_data String?
+  total_tokens     Int?
+  cost             Decimal?  @db.Decimal(10, 6)
+  rating           Int?
+  request_id       String?   @db.VarChar(100)
+}
+

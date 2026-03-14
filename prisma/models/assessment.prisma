@@ -1,0 +1,16 @@
+model assessment {
+  assessment_id Int      @id @default(autoincrement())
+  doc_id        String?  @db.Char(36)
+  class_id      Int?
+  start_date    DateTime? @db.Timestamp(6)
+  due_date      DateTime? @db.Timestamp(6)
+  total_done    Int?
+  status        String?   @db.VarChar(50)
+  assigned_by   Int?
+
+  USER               USER?                @relation(fields: [assigned_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  classroom          classroom?           @relation(fields: [class_id], references: [class_id], onDelete: NoAction, onUpdate: NoAction)
+  document           document?            @relation(fields: [doc_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student_submission student_submission[]
+}
+

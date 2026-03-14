@@ -1,0 +1,17 @@
+model answer_key {
+  id       String @id @default(uuid()) @db.Char(36)
+  block_id String @unique @db.Char(36) // 1 block chỉ có 1 answer key
+
+  // MCQ:        {"index": 2}  hoặc  {"indices": [1, 3]}
+  // SHORT:      {"keywords": ["hạt nhân", "electron"]}
+  // FILL_BLANK: {"answers": ["Paris", "London"]}
+  // ESSAY:      null (chấm tay / AI grading)
+  answer_type    String  @db.VarChar(50)
+  correct_answer Json?
+  score          Decimal @db.Decimal(5, 2)
+
+  block document_block @relation(fields: [block_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([block_id])
+}
+

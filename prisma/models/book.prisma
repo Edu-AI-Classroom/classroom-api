@@ -1,0 +1,14 @@
+model book {
+  book_id      Int      @id @default(autoincrement())
+  subject_id   Int?
+  grade_level  Int?
+  volume       Int?
+  book_title   String?  @db.VarChar(255)
+  publisher    String?  @db.VarChar(255)
+  publish_year Int?
+  updated_at   DateTime? @db.Timestamp(6)
+
+  subject      subject?       @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
+  book_section book_section[]
+}
+
