@@ -7,6 +7,7 @@
     "build:api": "nx build classroom-api",
     "start": "node dist/apps/classroom-api/main.js",
     "prepare": "husky",
+    "postinstall": "prisma generate --config=./apps/classroom-api/src/config/prisma/prisma.config.ts",
     "prisma": "prisma --config=./apps/classroom-api/src/config/prisma/prisma.config.ts"
   },
   "lint-staged": {
