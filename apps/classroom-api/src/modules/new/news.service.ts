@@ -1,15 +1,14 @@
 import {
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
-  BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { R2Service } from '../../infrastructure/cloudflare_r2/r2.service'; // Giữ nguyên path của bạn
-import { CreateNewsDto } from './dto/create-news.dto';
-import { UpdateNewsDto } from './dto/update-news.dto';
-import { NewsResponseDto } from './dto/news-response.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { R2Service } from '../../infrastructure/cloudflare_r2/r2.service'; // Giữ nguyên path của bạn
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { CreateNewsDto } from './dto/create-news.dto';
+import { NewsResponseDto } from './dto/news-response.dto';
+import { UpdateNewsDto } from './dto/update-news.dto';
 
 @Injectable()
 export class NewsService {
@@ -24,7 +23,7 @@ export class NewsService {
     file?: Express.Multer.File,
   ): Promise<NewsResponseDto> {
     // Sử dụng camelCase từ DTO mới
-    const { classId, content, audience, isPinned } = createNewsDto;
+    const { classId, content, audience, isPinned, title } = createNewsDto;
 
     // 1. Verify access
     await this.verifyTeacherAccess(userId, classId);
@@ -36,16 +35,22 @@ export class NewsService {
     }
 
     // 3. Save to DB
+    const newsTitle = title || content.substring(0, 100);
     const news = await this.prisma.news.create({
       data: {
-        class_id: classId,
-        user_post_id: userId,
+        title: newsTitle,
+        classroom: {
+          connect: { class_id: classId },
+        },
         content: content,
         audience: audience || 'all',
         is_pinned: isPinned || false,
         status: 'PUBLISHED',
         media_url: mediaUrl,
         uploaded_at: new Date(),
+        user_post: {
+          connect: { user_id: userId },
+        },
       },
       include: {
         user_post: true, // Lấy tên tác giả
