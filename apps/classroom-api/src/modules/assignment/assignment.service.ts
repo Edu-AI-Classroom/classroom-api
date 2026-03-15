@@ -1,18 +1,15 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { CreateAssignmentDto } from './dtos/create-assignment.dto';
 import {
-  CreateAssignmentDto,
-  AssignmentType,
-} from './dtos/create-assignment.dto';
-import {
-  UpdateAssignmentDto,
-  SubmitAssignmentDto,
   GradeSubmissionDto,
+  SubmitAssignmentDto,
+  UpdateAssignmentDto,
 } from './dtos/update-assignment.dto';
 
 @Injectable()
