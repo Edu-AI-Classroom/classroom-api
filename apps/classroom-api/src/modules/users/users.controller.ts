@@ -18,10 +18,12 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CreateUserDto } from './dtos/create-user.dto';
+import { CurrentSubscriptionDto } from './dtos/current-subscription.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UsersService } from './users.service';
 
@@ -47,6 +49,22 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Danh sách user' })
   findAll() {
     return this.usersService.findAll();
+  }
+
+  @Get('current-subscription')
+  @ApiOperation({
+    summary:
+      'Lấy thông tin subscription hiện tại của user (từ transaction thành công)',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Thông tin subscription (null nếu hết hạn hoặc chưa thanh toán)',
+    type: CurrentSubscriptionDto,
+  })
+  @ApiResponse({ status: 401, description: 'Chưa xác thực' })
+  getCurrentSubscription(@CurrentUser() user: any) {
+    return this.usersService.getCurrentSubscription(user.userId);
   }
 
   @Get('by-email')

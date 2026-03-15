@@ -19,17 +19,16 @@ model USER {
   credit            Int?                @default(0)
   assessment        assessment[]
   classroom         classroom[]
+  comments          comment[]
   content_bank      content_bank[]
   document          document[]
+  approved_news     news[]              @relation("ApprovedNews")
+  news_posts        news[]              @relation("UserPosts")
   personal_info     personal_info?
   student           student?
   teacher           teacher?
   teacher_classroom teacher_classroom[]
   transaction       transaction[]
-
-  news_posts        news[]              @relation("UserPosts")
-  approved_news     news[]              @relation("ApprovedNews")
-  comments          comment[]
 }
 
 model ai_audit_log {
@@ -144,9 +143,10 @@ model classroom {
   class_student     class_student[]
   USER              USER                @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   subject           subject?            @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
+  document          document[]
+  news              news[]
   student_report    student_report[]
   teacher_classroom teacher_classroom[]
-  news              news[]
 }
 
 model content_bank {
@@ -193,7 +193,10 @@ model document {
   updated_at                                                 DateTime?          @db.Timestamp(6)
   owner_id                                                   Int?
   current_ver_id                                             Int?
+  class_id                                                   Int?
+  created_at                                                 DateTime?          @default(now()) @db.Timestamp(6)
   assessment                                                 assessment[]
+  classroom                                                  classroom?         @relation(fields: [class_id], references: [class_id], onUpdate: NoAction)
   USER                                                       USER?              @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   subject                                                    subject?           @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
   document_version_document_current_ver_idTodocument_version document_version?  @relation("document_current_ver_idTodocument_version", fields: [current_ver_id], references: [ver_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_doc_current_version")
@@ -405,29 +408,32 @@ model transaction {
   transaction_type String?   @db.VarChar(50)
   amount           Decimal?  @db.Decimal(10, 2)
   note             String?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
   order_code       String?   @unique @db.VarChar(50)
   sub_code         String?   @db.VarChar(50)
   status           String?   @default("PENDING") @db.VarChar(50)
   updated_at       DateTime? @db.Timestamp(6)
+  signature        String?   @db.Text
   USER             USER?     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model news {
-  news_id      Int       @id @default(autoincrement())
+  news_id      Int  @id @default(autoincrement())
   class_id     Int
   user_post_id Int?
-  title        String?   @db.VarChar(255)
-  content      String?   @db.Text
-  media_url    String?   @db.VarChar(255)
-  status       String?   @db.VarChar(50)
-  
-  audience     String?   @default("all") @db.VarChar(50) 
-  is_pinned    Boolean?  @default(false)
 
-  uploaded_at  DateTime? @default(now()) @db.Timestamp(6)
-  updated_at   DateTime? @db.Timestamp(6)
-  approved_by  Int?
-  approved_at  DateTime? @db.Timestamp(6)
+  title     String  @db.VarChar(255)
+  content   String? @db.Text
+  media_url String? @db.VarChar(255)
+  status    String? @db.VarChar(50)
+
+  audience  String?  @default("all") @db.VarChar(50)
+  is_pinned Boolean? @default(false)
+
+  uploaded_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @db.Timestamp(6)
+  approved_by Int?
+  approved_at DateTime? @db.Timestamp(6)
 
   classroom        classroom @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
   user_post        USER?     @relation("UserPosts", fields: [user_post_id], references: [user_id], onDelete: NoAction)
@@ -442,14 +448,13 @@ model comment {
   parent_comment_id Int?
   news_id           Int
   user_id           Int
-  content           String    @db.Text
+  content           String
   uploaded_at       DateTime? @default(now()) @db.Timestamp(6)
   updated_at        DateTime? @db.Timestamp(6)
-
-  news           news      @relation(fields: [news_id], references: [news_id], onDelete: Cascade)
-  user           USER      @relation(fields: [user_id], references: [user_id], onDelete: NoAction)
-  parent_comment comment?  @relation("CommentToComment", fields: [parent_comment_id], references: [comment_id], onDelete: Cascade)
-  replies        comment[] @relation("CommentToComment")
+  news              news      @relation(fields: [news_id], references: [news_id], onDelete: Cascade)
+  parent_comment    comment?  @relation("CommentToComment", fields: [parent_comment_id], references: [comment_id], onDelete: Cascade)
+  replies           comment[] @relation("CommentToComment")
+  user              USER      @relation(fields: [user_id], references: [user_id], onDelete: NoAction)
 
   @@map("comment")
 }

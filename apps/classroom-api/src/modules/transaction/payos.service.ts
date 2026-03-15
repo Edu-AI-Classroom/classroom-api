@@ -7,6 +7,7 @@ import {
   Webhook,
   WebhookData,
 } from '@payos/node';
+import * as crypto from 'crypto';
 import { PayOSInitiateData, PayOSPaymentStatus } from './types/payos.type';
 
 @Injectable()
@@ -34,11 +35,11 @@ export class PayOSService {
   }
 
   /**
-   * Create a payment link with PayOS
+   * Create a payment link with PayOS and generate signature
    */
   async createPaymentLink(
     data: PayOSInitiateData,
-  ): Promise<CreatePaymentLinkResponse> {
+  ): Promise<CreatePaymentLinkResponse & { signature: string }> {
     try {
       const payload = {
         orderCode: Number(data.orderCode),
@@ -52,12 +53,36 @@ export class PayOSService {
       };
 
       const result = await this.payos.paymentRequests.create(payload);
+
+      // Generate signature for this payment link
+      const signature = this.generatePaymentLinkSignature({
+        orderCode: data.orderCode,
+        amount: data.amount,
+        description: data.description,
+      });
+
       this.logger.log(`Payment link created: ${data.orderCode}`);
-      return result;
+      return { ...result, signature };
     } catch (error) {
       this.logger.error(`Failed to create payment link: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * Generate signature for payment link data
+   */
+  private generatePaymentLinkSignature(data: {
+    orderCode: string;
+    amount: number;
+    description: string;
+  }): string {
+    const signatureData = JSON.stringify(data);
+    const signature = crypto
+      .createHmac('sha256', this.checksumKey)
+      .update(signatureData)
+      .digest('hex');
+    return signature;
   }
 
   /**
