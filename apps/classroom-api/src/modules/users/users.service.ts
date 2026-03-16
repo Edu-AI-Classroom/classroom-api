@@ -133,6 +133,49 @@ export class UsersService {
     return { message: 'Xóa user thành công' };
   }
 
+  async getCurrentSubscription(userId: number) {
+    const prisma = this.prisma as any;
+
+    const latestTransaction = await prisma.transaction.findFirst({
+      where: {
+        user_id: userId,
+        status: 'SUCCESS',
+        sub_code: {
+          not: null,
+        },
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+
+    if (!latestTransaction || !latestTransaction.sub_code) {
+      return null;
+    }
+
+    const plan = await prisma.subscription_plan.findUnique({
+      where: { sub_code: latestTransaction.sub_code },
+    });
+
+    if (!plan) {
+      return null;
+    }
+
+    return {
+      subId: plan.sub_id,
+      subCode: plan.sub_code,
+      subName: plan.sub_name,
+      price: plan.price,
+      durationDays: plan.duration_days,
+      aiTokenLimit: plan.ai_token_limit,
+      aiRequestLimit: plan.ai_request_limit,
+      maxClasses: plan.max_classes,
+      maxDocuments: plan.max_documents,
+      isActive: plan.is_active,
+      lastPaymentAt: latestTransaction.created_at,
+    };
+  }
+
   private mapToUserResponse(user: any) {
     return {
       userId: user.user_id,

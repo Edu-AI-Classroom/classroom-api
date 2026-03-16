@@ -8,6 +8,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,6 +19,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { Roles } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -47,6 +49,15 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Danh sách user' })
   findAll() {
     return this.usersService.findAll();
+  }
+
+  @Get('current-subscription')
+  @ApiOperation({ summary: 'Gói subscription hiện tại của user đăng nhập' })
+  @ApiResponse({ status: 200, description: 'Thông tin gói hiện tại hoặc null' })
+  getCurrentSubscription(@Req() req: Request) {
+    const user: any = (req as any).user;
+    const userId = user?.userId ?? user?.user_id;
+    return this.usersService.getCurrentSubscription(Number(userId));
   }
 
   @Get('by-email')
