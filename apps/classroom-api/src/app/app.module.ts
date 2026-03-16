@@ -20,6 +20,7 @@ import { SubjectModule } from '../modules/subject/subject.module';
 import { SubscriptionPlanModule } from '../modules/subscription-plan/subscription-plan.module';
 import { TransactionModule } from '../modules/transaction/transaction.module';
 import { UsersModule } from '../modules/users/users.module';
+import { TeacherQuizModule } from '../modules/teacher-quiz/teacher-quiz.module';
 @Module({
   providers: [
     {
@@ -50,6 +51,7 @@ import { UsersModule } from '../modules/users/users.module';
     R2Module,
     // AssignmentModule,
     SubjectModule,
+    TeacherQuizModule,
   ],
   controllers: [],
 })
