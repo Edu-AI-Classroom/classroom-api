@@ -21,6 +21,7 @@ import { SubscriptionPlanModule } from '../modules/subscription-plan/subscriptio
 import { TransactionModule } from '../modules/transaction/transaction.module';
 import { UsersModule } from '../modules/users/users.module';
 import { TeacherQuizModule } from '../modules/teacher-quiz/teacher-quiz.module';
+import { StudentQuizModule } from '../modules/student-quiz/student-quiz.module';
 @Module({
   providers: [
     {
@@ -52,6 +53,7 @@ import { TeacherQuizModule } from '../modules/teacher-quiz/teacher-quiz.module';
     // AssignmentModule,
     SubjectModule,
     TeacherQuizModule,
+    StudentQuizModule,
   ],
   controllers: [],
 })

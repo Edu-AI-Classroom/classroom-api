@@ -544,6 +544,114 @@ export class ClassroomService {
     };
   }
 
+  async getStudentQuizStats(classId: number, userId: number) {
+    await this.verifyUserIsTeacher(userId, classId);
+
+    const classStudents = await this.prisma.class_student.findMany({
+      where: { class_id: classId } as any,
+      select: { student_id: true } as any,
+    } as any);
+    const studentIds = classStudents
+      .map((s: any) => s.student_id)
+      .filter(Boolean);
+
+    const assessments = await this.prisma.assessment.findMany({
+      where: {
+        class_id: classId,
+        document: { type: { in: ['ASSIGNMENT', 'EXAM'] } as any },
+      } as any,
+      select: { assessment_id: true, doc_id: true } as any,
+    } as any);
+    const totalAssigned = assessments.length;
+    const assessmentIds = assessments.map((a: any) => a.assessment_id);
+    const docIds = assessments.map((a: any) => a.doc_id).filter(Boolean);
+
+    const metaList = await (this.prisma as any).quiz_meta?.findMany?.({
+      where: { document_id: { in: docIds } },
+      select: { document_id: true, total_points: true } as any,
+    });
+    const totalPointsByDoc = new Map<string, number>(
+      (metaList ?? []).map((m: any) => [
+        m.document_id,
+        Number(m.total_points ?? 0),
+      ]),
+    );
+
+    await Promise.all(
+      docIds
+        .filter(
+          (id: string) =>
+            !totalPointsByDoc.has(id) || totalPointsByDoc.get(id) === 0,
+        )
+        .map(async (docId: string) => {
+          const sum = await this.prisma.answer_key
+            .aggregate({
+              where: { block: { document_id: docId } } as any,
+              _sum: { score: true },
+            } as any)
+            .then((r: any) => Number(r?._sum?.score ?? 0));
+          totalPointsByDoc.set(docId, sum);
+        }),
+    );
+
+    const attempts = await this.prisma.student_submission.findMany({
+      where: {
+        student_id: { in: studentIds },
+        assessment_id: { in: assessmentIds },
+        OR: [{ submitted_at: { not: null } }, { status: 'SUBMITTED' }],
+      } as any,
+      orderBy: { attempt_id: 'desc' } as any,
+      select: {
+        attempt_id: true,
+        student_id: true,
+        assessment_id: true,
+        total_score: true,
+        assessment: { select: { doc_id: true } as any } as any,
+      } as any,
+    } as any);
+
+    // latest attempt per (student, assessment)
+    const latest = new Map<string, any>();
+    for (const a of attempts) {
+      const key = `${a.student_id}-${a.assessment_id}`;
+      if (!latest.has(key)) latest.set(key, a);
+    }
+
+    const acc = new Map<number, { submitted: number; pctSum: number }>();
+    for (const a of latest.values()) {
+      const sid = a.student_id;
+      if (!sid) continue;
+      const docId = a.assessment?.doc_id;
+      const totalPoints = docId ? (totalPointsByDoc.get(docId) ?? 0) : 0;
+      const score = Number(a.total_score ?? 0);
+      const pct = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
+
+      const cur = acc.get(sid) ?? { submitted: 0, pctSum: 0 };
+      cur.submitted += 1;
+      cur.pctSum += pct;
+      acc.set(sid, cur);
+    }
+
+    return studentIds.map((sid: number) => {
+      const cur = acc.get(sid) ?? { submitted: 0, pctSum: 0 };
+      const submittedCount = cur.submitted;
+      const submittedPct =
+        totalAssigned > 0
+          ? Math.round((submittedCount / totalAssigned) * 100)
+          : 0;
+      const avgGradePct =
+        submittedCount > 0 ? Math.round(cur.pctSum / submittedCount) : 0;
+
+      return {
+        studentId: sid,
+        avgGradePct,
+        submittedCount,
+        totalAssigned,
+        submittedPct,
+      };
+    });
+  }
+
   /**
    * Create a group in a classroom
    */

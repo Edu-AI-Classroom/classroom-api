@@ -496,8 +496,18 @@ export class TeacherQuizService {
     }
 
     const attempts = await this.prisma.student_submission.findMany({
-      where: { assessment_id: assessment.assessment_id } as any,
-      select: { total_score: true, submitted_at: true, started_at: true },
+      where: {
+        assessment_id: assessment.assessment_id,
+        OR: [{ submitted_at: { not: null } }, { status: 'SUBMITTED' }],
+      } as any,
+      orderBy: { attempt_id: 'desc' } as any,
+      select: {
+        attempt_id: true,
+        student_id: true,
+        total_score: true,
+        submitted_at: true,
+        started_at: true,
+      },
     } as any);
 
     const totalStudents = assessment.class_id
@@ -506,8 +516,16 @@ export class TeacherQuizService {
         } as any)
       : 0;
 
-    const scores = attempts.map((a: any) => Number(a.total_score ?? 0));
-    const totalStudentsAttempted = attempts.length;
+    const latestByStudent = new Map<number, any>();
+    for (const a of attempts) {
+      const sid = a.student_id;
+      if (!sid) continue;
+      if (!latestByStudent.has(sid)) latestByStudent.set(sid, a);
+    }
+
+    const latestAttempts = [...latestByStudent.values()];
+    const scores = latestAttempts.map((a: any) => Number(a.total_score ?? 0));
+    const totalStudentsAttempted = latestAttempts.length;
     const highestScore = scores.length ? Math.max(...scores) : 0;
     const averageScore = scores.length
       ? scores.reduce((s, x) => s + x, 0) / scores.length
@@ -517,7 +535,7 @@ export class TeacherQuizService {
 
     // attemptsByDay: last 14 days
     const byDay = new Map<string, number>();
-    for (const a of attempts) {
+    for (const a of latestAttempts) {
       const d = a.submitted_at ?? a.started_at;
       if (!d) continue;
       const date = new Date(d);

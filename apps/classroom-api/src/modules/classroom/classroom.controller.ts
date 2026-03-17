@@ -468,6 +468,20 @@ Results include current group assignment if any.
     };
   }
 
+  @Get(':classId/students/stats')
+  @Roles('TEACHER')
+  @ApiOperation({
+    summary: 'Get student quiz stats for a classroom',
+    description:
+      'Return avg grade (%) and submission rate (%) per student for quizzes (ASSIGNMENT/EXAM) assigned to this class.',
+  })
+  async getStudentStats(
+    @Param('classId') classId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
+    return this.classroomService.getStudentQuizStats(classId, userId);
+  }
+
   // ==================== GROUP MANAGEMENT ====================
 
   @Post(':classId/groups')
