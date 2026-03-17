@@ -1,6 +1,7 @@
 import {
   IsIn,
   IsInt,
+  IsISO8601,
   IsOptional,
   IsString,
   MaxLength,
@@ -31,4 +32,8 @@ export class CreateQuizDto {
   @IsInt()
   @Min(0)
   totalPoints?: number;
+
+  @IsOptional()
+  @IsISO8601()
+  dueDate?: string;
 }

@@ -37,6 +37,13 @@ export class CreateQuestionDto {
   @Type(() => Number)
   maxScore!: number;
 
+  // Optional: expected answer / rubric for ESSAY (for teacher grading / AI assist)
+  @ValidateIf((v) => v.type === 'ESSAY')
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  expectedAnswer?: string;
+
   @IsOptional()
   @Type(() => Number)
   positionOrder?: number;

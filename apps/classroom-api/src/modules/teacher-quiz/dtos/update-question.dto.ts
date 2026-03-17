@@ -37,4 +37,10 @@ export class UpdateQuestionDto {
   @Min(0)
   @Type(() => Number)
   maxScore?: number;
+
+  @ValidateIf((v) => v.type === 'ESSAY')
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  expectedAnswer?: string;
 }

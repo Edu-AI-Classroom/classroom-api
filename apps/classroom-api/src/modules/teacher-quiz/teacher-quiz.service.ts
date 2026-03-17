@@ -22,6 +22,7 @@ export class TeacherQuizService {
       where: { id: quizId },
       include: {
         classroom: { select: { class_id: true, class_name: true } },
+        assessments: { select: { due_date: true, assessment_id: true } },
         quiz_meta: true as any,
       } as any,
     } as any);
@@ -95,6 +96,7 @@ export class TeacherQuizService {
       include: {
         classroom: { select: { class_id: true, class_name: true } },
         blocks: { select: { id: true } },
+        assessments: { select: { due_date: true } },
       } as any,
     } as any);
 
@@ -108,6 +110,7 @@ export class TeacherQuizService {
       documentType: q.type,
       questionCount: (q.blocks ?? []).length,
       createdAt: q.created_at,
+      dueDate: q.assessments?.[0]?.due_date ?? null,
       status: q.status,
     }));
   }
@@ -147,6 +150,7 @@ export class TeacherQuizService {
           class_id: dto.classroomId,
           assigned_by: userId,
           status: 'DRAFT',
+          due_date: dto.dueDate ? new Date(dto.dueDate) : null,
         },
       });
 
@@ -189,6 +193,7 @@ export class TeacherQuizService {
       timeLimitMinutes: meta?.time_limit_minutes ?? null,
       totalPoints: meta?.total_points ?? null,
       createdAt: quiz.created_at,
+      dueDate: quiz.assessments?.[0]?.due_date ?? null,
       status: quiz.status,
     };
   }
@@ -234,6 +239,18 @@ export class TeacherQuizService {
         }
       }
 
+      if (dto.dueDate !== undefined) {
+        const assessment = await tx.assessment.findFirst({
+          where: { doc_id: quizId },
+        });
+        if (assessment) {
+          await tx.assessment.update({
+            where: { assessment_id: assessment.assessment_id },
+            data: { due_date: dto.dueDate ? new Date(dto.dueDate) : null },
+          });
+        }
+      }
+
       if (dto.timeLimitMinutes != null || dto.totalPoints != null) {
         await tx.quiz_meta.upsert({
           where: { document_id: quizId },
@@ -257,6 +274,25 @@ export class TeacherQuizService {
     await this.assertTeacherOwnsQuiz(userId, quizId);
 
     await this.prisma.$transaction(async (tx: any) => {
+      // If this quiz already has student attempts/answers, we must delete them first
+      const assessments = await tx.assessment.findMany({
+        where: { doc_id: quizId },
+        select: { assessment_id: true },
+      });
+      const assessmentIds = assessments.map((a: any) => a.assessment_id);
+
+      if (assessmentIds.length > 0) {
+        await tx.submission_ans.deleteMany({
+          where: {
+            student_submission: { assessment_id: { in: assessmentIds } },
+          },
+        });
+
+        await tx.student_submission.deleteMany({
+          where: { assessment_id: { in: assessmentIds } },
+        });
+      }
+
       await tx.quiz_meta
         ?.delete?.({ where: { document_id: quizId } })
         .catch(() => null);
@@ -300,6 +336,7 @@ export class TeacherQuizService {
         positionOrder: b.position_order,
         type: 'ESSAY',
         questionText,
+        expectedAnswer: (b.answer_key?.correct_answer as any)?.text ?? null,
         maxScore: Number(b.answer_key?.score ?? 0),
       };
     });
@@ -349,7 +386,11 @@ export class TeacherQuizService {
           block_id: block.id,
           answer_type: dto.type,
           correct_answer:
-            dto.type === 'MCQ' ? { index: dto.correctIndex } : null,
+            dto.type === 'MCQ'
+              ? { index: dto.correctIndex }
+              : dto.expectedAnswer
+                ? { text: dto.expectedAnswer }
+                : null,
           score: dto.maxScore,
         },
       });
@@ -413,13 +454,23 @@ export class TeacherQuizService {
           block_id: questionId,
           answer_type: dto.type,
           correct_answer:
-            dto.type === 'MCQ' ? { index: dto.correctIndex ?? 0 } : null,
+            dto.type === 'MCQ'
+              ? { index: dto.correctIndex ?? 0 }
+              : dto.expectedAnswer
+                ? { text: dto.expectedAnswer }
+                : null,
           score: dto.maxScore ?? 0,
         },
         update: {
           answer_type: dto.type,
           correct_answer:
-            dto.type === 'MCQ' ? { index: dto.correctIndex ?? 0 } : null,
+            dto.type === 'MCQ'
+              ? { index: dto.correctIndex ?? 0 }
+              : dto.expectedAnswer != null
+                ? dto.expectedAnswer
+                  ? { text: dto.expectedAnswer }
+                  : null
+                : block.answer_key?.correct_answer ?? null,
           score: dto.maxScore ?? block.answer_key?.score ?? 0,
         },
       });
@@ -439,9 +490,13 @@ export class TeacherQuizService {
     if (!block) throw new NotFoundException('Question not found');
     await this.assertTeacherOwnsQuiz(userId, (block as any).document_id);
 
-    await this.prisma.document_block.delete({
-      where: { id: questionId },
-    } as any);
+    await this.prisma.$transaction(async (tx: any) => {
+      // If students already answered this question, remove their answers first
+      await tx.submission_ans.deleteMany({ where: { block_id: questionId } });
+      // answer_key has onDelete: Cascade from document_block, but deleting explicitly is safe
+      await tx.answer_key.deleteMany({ where: { block_id: questionId } });
+      await tx.document_block.delete({ where: { id: questionId } });
+    });
     return { message: 'Question deleted successfully' };
   }
 

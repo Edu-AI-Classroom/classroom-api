@@ -13,10 +13,23 @@ type QuizType = 'ASSIGNMENT' | 'EXAM';
 export class StudentQuizService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private normalizeText(value: unknown): string {
+    if (typeof value !== 'string') return '';
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  }
+
   private async assertStudentHasAccessToQuiz(userId: number, quizId: string) {
     const assessment = await this.prisma.assessment.findFirst({
       where: { doc_id: quizId } as any,
-      select: { assessment_id: true, class_id: true, doc_id: true },
+      select: {
+        assessment_id: true,
+        class_id: true,
+        doc_id: true,
+        due_date: true,
+      },
     } as any);
 
     if (!assessment) throw new NotFoundException('Quiz is not assigned');
@@ -119,6 +132,7 @@ export class StudentQuizService {
     }
 
     return quizDocs.map((q: any) => {
+      const a = (assessments as any[]).find((x) => x.document?.id === q.id);
       const lastAttempt = lastAttemptByQuiz.get(q.id) ?? null;
       return {
         id: q.id,
@@ -127,6 +141,7 @@ export class StudentQuizService {
         documentType: q.type as QuizType,
         status: q.status,
         createdAt: q.created_at,
+        dueDate: a?.due_date ?? null,
         lastAttempt: lastAttempt
           ? {
               attemptId: lastAttempt.attempt_id,
@@ -142,7 +157,10 @@ export class StudentQuizService {
   }
 
   async getQuizDetail(userId: number, quizId: string) {
-    const { quiz } = await this.assertStudentHasAccessToQuiz(userId, quizId);
+    const { quiz, assessment } = await this.assertStudentHasAccessToQuiz(
+      userId,
+      quizId,
+    );
     const meta = await (this.prisma as any).quiz_meta?.findUnique?.({
       where: { document_id: quizId },
     });
@@ -156,6 +174,7 @@ export class StudentQuizService {
       totalPoints: meta?.total_points ?? null,
       status: quiz.status,
       createdAt: quiz.created_at,
+      dueDate: assessment?.due_date ?? null,
       classId: quiz.class_id,
     };
   }
@@ -252,7 +271,7 @@ export class StudentQuizService {
     attemptId: number,
     dto: SubmitQuizDto,
   ) {
-    await this.assertStudentHasAccessToQuiz(userId, quizId);
+    const { assessment } = await this.assertStudentHasAccessToQuiz(userId, quizId);
 
     const attempt: any = await this.prisma.student_submission.findUnique({
       where: { attempt_id: attemptId } as any,
@@ -282,7 +301,9 @@ export class StudentQuizService {
       if (!b) throw new BadRequestException(`Invalid blockId: ${a.blockId}`);
 
       const isMcq = b.semantic_role === 'MCQ';
+      const isEssay = b.semantic_role === 'ESSAY';
       const correctIndex = (b.answer_key?.correct_answer as any)?.index;
+      const expectedEssay = (b.answer_key?.correct_answer as any)?.text;
       const maxScore = Number(b.answer_key?.score ?? 0);
 
       let score: number | null = null;
@@ -291,6 +312,15 @@ export class StudentQuizService {
       if (isMcq) {
         const studentIndex = (a.answer as any)?.index;
         score = studentIndex === correctIndex ? maxScore : 0;
+        gradingStatus = 'verified';
+      }
+
+      // Auto-grade ESSAY only when teacher provided an expected answer.
+      // Otherwise keep score null for manual grading.
+      if (isEssay && expectedEssay) {
+        const studentText = this.normalizeText((a.answer as any)?.text);
+        const expectedText = this.normalizeText(expectedEssay);
+        score = studentText && expectedText && studentText === expectedText ? maxScore : 0;
         gradingStatus = 'verified';
       }
 
@@ -305,6 +335,10 @@ export class StudentQuizService {
         grading_status: gradingStatus,
       };
     });
+
+    const submittedAt = new Date();
+    const isLate =
+      !!assessment?.due_date && submittedAt.getTime() > new Date(assessment.due_date).getTime();
 
     const updated = await this.prisma.$transaction(async (tx: any) => {
       for (const ans of toUpsert) {
@@ -330,8 +364,8 @@ export class StudentQuizService {
         where: { attempt_id: attemptId },
         data: {
           total_score: totalScore,
-          status: 'SUBMITTED',
-          submitted_at: new Date(),
+          status: isLate ? 'SUBMITTED_LATE' : 'SUBMITTED',
+          submitted_at: submittedAt,
         },
         select: {
           attempt_id: true,

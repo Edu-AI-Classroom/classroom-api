@@ -24,6 +24,135 @@ import {
 export class ClassroomService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getClassGradebook(userId: number, classId: number) {
+    // Teachers only (but verify access first)
+    await this.verifyUserAccessToClassroom(userId, classId);
+
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { class_id: classId },
+      select: { created_by: true } as any,
+    } as any);
+
+    const isTeacher = await this.prisma.teacher_classroom.findFirst({
+      where: { class_id: classId, teacher_id: userId } as any,
+      select: { teacher_id: true } as any,
+    } as any);
+
+    // Backward compatibility: allow class owner even if teacher_classroom row is missing
+    if (!isTeacher && classroom?.created_by !== userId) {
+      throw new ForbiddenException('Only teachers can view the gradebook');
+    }
+
+    const [students, assessments] = await Promise.all([
+      this.prisma.class_student.findMany({
+        where: { class_id: classId } as any,
+        include: {
+          student: {
+            include: {
+              USER: {
+                select: { user_id: true, user_name: true, email: true } as any,
+              } as any,
+            } as any,
+          } as any,
+        } as any,
+      } as any),
+      this.prisma.assessment.findMany({
+        where: { class_id: classId } as any,
+        include: {
+          document: {
+            select: { id: true, title: true, type: true, created_at: true } as any,
+          } as any,
+        } as any,
+        orderBy: { start_date: 'desc' } as any,
+      } as any),
+    ]);
+
+    const quizzes = (assessments as any[])
+      .map((a) => a.document)
+      .filter(Boolean)
+      .filter((d: any) => d.type === 'ASSIGNMENT' || d.type === 'EXAM')
+      .map((d: any) => ({
+        id: d.id,
+        title: d.title,
+        documentType: d.type,
+        createdAt: d.created_at,
+      }));
+
+    const assessmentByDocId = new Map<string, any>();
+    for (const a of assessments as any[]) {
+      if (a.document?.id) assessmentByDocId.set(a.document.id, a);
+    }
+
+    const assessmentIds = (assessments as any[]).map((a) => a.assessment_id);
+    const submissions = assessmentIds.length
+      ? await this.prisma.student_submission.findMany({
+          where: { assessment_id: { in: assessmentIds } } as any,
+          orderBy: { attempt_id: 'desc' } as any,
+          select: {
+            attempt_id: true,
+            assessment_id: true,
+            student_id: true,
+            total_score: true,
+            status: true,
+            submitted_at: true,
+          } as any,
+        } as any)
+      : [];
+
+    // latest attempt per (student, assessment)
+    const latest = new Map<string, any>();
+    for (const s of submissions as any[]) {
+      const key = `${s.student_id}:${s.assessment_id}`;
+      if (!latest.has(key)) latest.set(key, s);
+    }
+
+    const rows = (students as any[]).map((cs) => {
+      const u = cs.student?.USER;
+      const studentId = cs.student_id;
+
+      const grades: Record<string, any> = {};
+      let total = 0;
+      let gradedCount = 0;
+
+      for (const q of quizzes) {
+        const a = assessmentByDocId.get(q.id);
+        if (!a) continue;
+        const key = `${studentId}:${a.assessment_id}`;
+        const attempt = latest.get(key);
+        const score =
+          attempt?.total_score != null ? Number(attempt.total_score) : null;
+        if (score != null) {
+          total += score;
+          gradedCount += 1;
+        }
+        grades[q.id] = {
+          attemptId: attempt?.attempt_id ?? null,
+          status: attempt?.status ?? null,
+          submittedAt: attempt?.submitted_at ?? null,
+          totalScore: score,
+        };
+      }
+
+      const averageScore = gradedCount > 0 ? total / gradedCount : null;
+
+      return {
+        student: {
+          id: u?.user_id ?? studentId,
+          name: u?.user_name ?? '',
+          email: u?.email ?? null,
+        },
+        averageScore: averageScore != null ? Number(averageScore.toFixed(2)) : null,
+        grades,
+      };
+    });
+
+    return {
+      classId,
+      quizzes,
+      rows,
+    };
+  }
+
   /**
    * Create a new classroom
    * The authenticated user becomes the owner
