@@ -449,7 +449,7 @@ If the student is in a group, they will be automatically removed from that group
   }
 
   @Get(':classId/students')
-  @Roles('TEACHER')
+  @Roles('TEACHER', 'STUDENT')
   @ApiOperation({
     summary: 'Get all students in the classroom',
     description: `

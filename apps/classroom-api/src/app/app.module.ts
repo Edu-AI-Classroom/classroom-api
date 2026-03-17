@@ -22,6 +22,7 @@ import { TransactionModule } from '../modules/transaction/transaction.module';
 import { UsersModule } from '../modules/users/users.module';
 import { TeacherQuizModule } from '../modules/teacher-quiz/teacher-quiz.module';
 import { StudentQuizModule } from '../modules/student-quiz/student-quiz.module';
+import { AiQuizModule } from '../modules/ai-quiz/ai-quiz.module';
 @Module({
   providers: [
     {
@@ -54,6 +55,7 @@ import { StudentQuizModule } from '../modules/student-quiz/student-quiz.module';
     SubjectModule,
     TeacherQuizModule,
     StudentQuizModule,
+    AiQuizModule,
   ],
   controllers: [],
 })
