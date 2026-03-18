@@ -8,7 +8,9 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -18,6 +20,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public, Roles } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -68,6 +71,27 @@ export class SubscriptionPlanController {
   @ApiResponse({ status: 404, description: 'Không tìm thấy' })
   findByCode(@Param('sub_code') sub_code: string) {
     return this.subscriptionPlanService.findByCode(sub_code);
+  }
+
+  @Get('user/my-subscription')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Lấy thông tin subscription hiện tại của user',
+    description:
+      'Trả về trạng thái subscription, ngày hết hạn, số ngày còn lại, v.v.',
+  })
+  @ApiResponse({ status: 200, description: 'Thông tin subscription' })
+  @ApiResponse({ status: 401, description: 'Chưa đăng nhập' })
+  async getMySubscription(@Req() request: any) {
+    const userId =
+      request.user?.userId || request.user?.user_id || request.user?.id;
+
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+
+    return this.subscriptionPlanService.getUserSubscription(userId);
   }
 
   @Get(':id')
