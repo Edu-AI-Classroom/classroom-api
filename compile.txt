@@ -1,0 +1,29 @@
+﻿apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(11,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, string> & { name: "title"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(12,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, string> & { name: "title"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(13,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, string> & { name: "title"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(14,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, string> & { name: "title"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(17,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, string> & { name: "content"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(18,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, string> & { name: "content"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(19,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, string> & { name: "content"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(22,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, number> & { name: "classId"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(23,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, number> & { name: "classId"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(24,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, number> & { name: "classId"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(27,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, any> & { name: "file"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+apps/classroom-api/src/modules/lessons/dtos/create-lesson.dto.ts(33,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+  Argument of type 'ClassFieldDecoratorContext<CreateLessonDto, any> & { name: "file"; private: false; static: false; }' is not assignable to parameter of type 'string | symbol'.
+node_modules/.pnpm/@prisma+adapter-pg@7.3.0/node_modules/@prisma/adapter-pg/dist/index.d.ts(3,8): error TS1192: Module '"D:/learn/Semester7/SWD392/Project/classroom-api/node_modules/.pnpm/@types+pg@8.18.0/node_modules/@types/pg/index"' has no default export.
+node_modules/.pnpm/@prisma+client-runtime-utils@7.5.0/node_modules/@prisma/client-runtime-utils/dist/index.d.ts(4,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+node_modules/.pnpm/@prisma+client-runtime-utils@7.5.0/node_modules/@prisma/client-runtime-utils/dist/index.d.ts(10,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+node_modules/.pnpm/@prisma+client-runtime-utils@7.5.0/node_modules/@prisma/client-runtime-utils/dist/index.d.ts(325,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.
+node_modules/.pnpm/@prisma+client-runtime-utils@7.5.0/node_modules/@prisma/client-runtime-utils/dist/index.d.ts(355,5): error TS18028: Private identifiers are only available when targeting ECMAScript 2015 and higher.

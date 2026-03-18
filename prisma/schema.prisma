@@ -3,10 +3,10 @@ generator client {
 }
 
 // Uncomment the following block to enable ERD generation with prisma-erd-generator
-// generator erd {
-//   provider = "prisma-erd-generator"
-//   output = "../erd.svg"
-// }
+//generator erd {
+//  provider = "prisma-erd-generator"
+//  output = "../erd.svg"
+//}
 
 datasource db {
   provider = "postgresql"
