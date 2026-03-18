@@ -50,7 +50,9 @@ export class AiQuizService {
     pointsPerQuestion: number,
   ): AiQuizQuestion[] {
     if (!Array.isArray(questions)) {
-      throw new BadRequestException('AI trả về format không hợp lệ (questions)');
+      throw new BadRequestException(
+        'AI trả về format không hợp lệ (questions)',
+      );
     }
     if (questions.length !== totalQuestions) {
       throw new BadRequestException(
@@ -71,9 +73,7 @@ export class AiQuizService {
         const options = Array.isArray(q?.options) ? q.options.map(String) : [];
         const correctIndex = Number(q?.correctIndex);
         if (options.length < 2) {
-          throw new BadRequestException(
-            `Câu ${idx + 1} (MCQ) thiếu options`,
-          );
+          throw new BadRequestException(`Câu ${idx + 1} (MCQ) thiếu options`);
         }
         if (
           !Number.isInteger(correctIndex) ||
@@ -112,25 +112,37 @@ export class AiQuizService {
     });
   }
 
-  async generateForQuiz(userId: number, quizId: string, dto: GenerateQuizWithAiDto) {
+  async generateForQuiz(
+    userId: number,
+    quizId: string,
+    dto: GenerateQuizWithAiDto,
+  ) {
     const quiz = await this.prisma.document.findFirst({
       where: { id: quizId, owner_id: userId },
       select: { id: true },
     });
     if (!quiz) {
-      throw new BadRequestException('Quiz không tồn tại hoặc không thuộc quyền bạn');
+      throw new BadRequestException(
+        'Quiz không tồn tại hoặc không thuộc quyền bạn',
+      );
     }
 
     const totalQuestions = dto.totalQuestions ?? 10;
     const pointsPerQuestion = dto.pointsPerQuestion ?? 1;
 
     const mcqCount =
-      dto.mcqCount != null ? dto.mcqCount : Math.max(0, totalQuestions - (dto.essayCount ?? 0));
+      dto.mcqCount != null
+        ? dto.mcqCount
+        : Math.max(0, totalQuestions - (dto.essayCount ?? 0));
     const essayCount =
-      dto.essayCount != null ? dto.essayCount : Math.max(0, totalQuestions - mcqCount);
+      dto.essayCount != null
+        ? dto.essayCount
+        : Math.max(0, totalQuestions - mcqCount);
 
     if (mcqCount + essayCount !== totalQuestions) {
-      throw new BadRequestException('Tổng mcqCount + essayCount phải bằng totalQuestions');
+      throw new BadRequestException(
+        'Tổng mcqCount + essayCount phải bằng totalQuestions',
+      );
     }
 
     const language = dto.language ?? 'vi';
@@ -141,10 +153,10 @@ export class AiQuizService {
       'YÊU CẦU: Trả về DUY NHẤT một JSON object hợp lệ (không markdown, không giải thích ngoài JSON).',
       'JSON schema bắt buộc:',
       '{ "questions": [ { "type": "MCQ"|"ESSAY", "questionText": string, "options"?: string[], "correctIndex"?: number, "expectedAnswer"?: string, "explanation"?: string } ] }',
-      `Ngôn ngữ câu hỏi: ${language === 'vi' ? 'Tiếng Việt' : language}.`,
+      'NGÔN NGỮ: TẤT CẢ nội dung (câu hỏi, phương án, giải thích, đáp án mẫu) PHẢI ĐƯỢC VIẾT BẰNG TIẾNG VIỆT.',
       `Tổng số câu: ${totalQuestions}. MCQ: ${mcqCount}. Tự luận: ${essayCount}.`,
       'MCQ: options 4 lựa chọn, correctIndex 0..3.',
-      'ESSAY: expectedAnswer ngắn gọn (rubric/đáp án mẫu).',
+      'ESSAY: expectedAnswer BẮT BUỘC chỉ được 1 từ duy nhất (ví dụ: "3/4", "điện", "biến").',
       `Mỗi câu mặc định 1 điểm (frontend sẽ set maxScore = ${pointsPerQuestion}).`,
     ].join('\n');
 
@@ -193,4 +205,3 @@ export class AiQuizService {
     };
   }
 }
-
