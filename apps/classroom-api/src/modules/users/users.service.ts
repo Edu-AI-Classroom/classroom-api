@@ -133,6 +133,75 @@ export class UsersService {
     return { message: 'Xóa user thành công' };
   }
 
+  async getCurrentSubscription(userId: number) {
+    const prisma = this.prisma as any;
+
+    // Lấy personal_info của user để check xem đã đăng ký sub chưa
+    const personalInfo = await prisma.personal_info.findUnique({
+      where: { user_id: userId },
+      include: {
+        subscription_plan: true,
+      },
+    });
+
+    // Nếu không có personal_info hoặc chưa có sub_id
+    if (!personalInfo || !personalInfo.sub_id) {
+      return null;
+    }
+
+    // Kiểm tra transaction gần nhất có status = 'COMPLETED'
+    const transaction = await prisma.transaction.findFirst({
+      where: {
+        user_id: userId,
+        status: 'COMPLETED',
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+
+    // Nếu không có transaction thành công, không trả về gì
+    if (!transaction) {
+      return null;
+    }
+
+    const subscriptionPlan = personalInfo.subscription_plan;
+    const startDate = transaction.created_at;
+
+    if (!subscriptionPlan || !startDate) {
+      return null;
+    }
+
+    // Tính ngày hết hạn
+    const durationDays = subscriptionPlan.duration_days || 30;
+    const expiryDate = new Date(startDate);
+    expiryDate.setDate(expiryDate.getDate() + durationDays);
+
+    // Tính số ngày còn lại
+    const now = new Date();
+    const timeDifference = expiryDate.getTime() - now.getTime();
+    const daysRemaining = Math.ceil(timeDifference / (1000 * 3600 * 24));
+
+    // Kiểm tra hết hạn
+    const isExpired = now > expiryDate;
+
+    // Nếu hết hạn, không trả về gì
+    if (isExpired) {
+      return null;
+    }
+
+    // Nếu còn hạn, trả về thông tin subscription
+    return {
+      status: 'ACTIVE',
+      subscriptionName: subscriptionPlan.sub_name,
+      subscriptionCode: subscriptionPlan.sub_code,
+      startDate,
+      expiryDate,
+      daysRemaining,
+      subscriptionStatus: 'ACTIVE',
+    };
+  }
+
   private mapToUserResponse(user: any) {
     return {
       userId: user.user_id,

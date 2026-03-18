@@ -11,8 +11,6 @@ import {
   Put,
   Query,
   UseGuards,
-  UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -25,13 +23,11 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ValidateWebhookReplay } from './decorators/validate-webhook-replay.decorator';
 import {
   CreateTransactionDto,
   PayOSWebhookDto,
   UpdateTransactionDto,
 } from './dtos';
-import { PayOSWebhookValidationPipe } from './pipes';
 import { TransactionService } from './transaction.service';
 
 @ApiTags('Payment & Transactions')
@@ -93,22 +89,65 @@ export class TransactionController {
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   @ApiExcludeEndpoint()
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async handlePayOSWebhook(
-    @Body(PayOSWebhookValidationPipe) webhookDto: PayOSWebhookDto,
-    @ValidateWebhookReplay() replayInfo: any,
-  ) {
+  async handlePayOSWebhook(@Body() body: any) {
     try {
       this.logger.log('Received PayOS webhook');
-      this.logger.log(
-        `📦 Webhook payload: OrderCode=${webhookDto.data.orderCode}, Status=${webhookDto.data.status}`,
-      );
-      this.logger.debug(`Replay check: ${JSON.stringify(replayInfo)}`);
+      this.logger.debug(`📦 Full webhook body: ${JSON.stringify(body)}`);
 
-      return await this.transactionService.handlePayOSWebhook(webhookDto);
+      return await this.transactionService.handlePayOSWebhook(
+        body as PayOSWebhookDto,
+      );
     } catch (error) {
       this.logger.error(`Webhook error: ${error.message}`);
+      this.logger.error(`📦 Full body at error: ${JSON.stringify(body)}`);
 
+      return {
+        code: '01',
+        desc: error.message,
+        success: false,
+      };
+    }
+  }
+
+  /**
+   * Handle PayOS payment failed callback
+   * GET /transactions/payment-failed?code=00&id=xxx&cancel=true&status=CANCELLED&orderCode=xxx
+   */
+  @Public()
+  @Get('payment-failed')
+  @ApiExcludeEndpoint()
+  async handlePaymentFailed(
+    @Query('code') code?: string,
+    @Query('id') id?: string,
+    @Query('cancel') cancel?: string,
+    @Query('status') status?: string,
+    @Query('orderCode') orderCode?: string,
+  ) {
+    try {
+      this.logger.log(
+        `Payment failed callback: code=${code}, id=${id}, status=${status}, orderCode=${orderCode}`,
+      );
+
+      if (orderCode) {
+        const result = await this.transactionService.handlePaymentFailed(
+          orderCode,
+          status,
+        );
+        return {
+          code: '00',
+          desc: 'Payment failed status updated',
+          success: true,
+          data: result,
+        };
+      }
+
+      return {
+        code: '00',
+        desc: 'Payment failed status updated',
+        success: true,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to handle payment failed: ${error.message}`);
       return {
         code: '01',
         desc: error.message,
@@ -294,9 +333,10 @@ export class TransactionController {
 
   /**
    * Cancel payment
-   * POST /transactions/cancel/:orderCode
+   * PUT /transactions/cancel/:orderCode
    */
-  @Post('cancel/:orderCode')
+  @Put('cancel/:orderCode')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Hủy thanh toán' })
   @ApiResponse({ status: 200, description: 'Hủy thành công' })
   @ApiResponse({ status: 400, description: 'Mã đơn hàng không hợp lệ' })

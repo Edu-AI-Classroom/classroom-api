@@ -1,13 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  IsBoolean,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsIn,
-  IsBoolean,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
 export class CreateNewsDto {
   @ApiProperty({ example: 1, description: 'ID của lớp học' })
@@ -15,6 +15,11 @@ export class CreateNewsDto {
   @Type(() => Number)
   @IsNotEmpty()
   classId: number; // camelCase theo chuẩn
+
+  @ApiPropertyOptional({ example: 'Announcement Title' })
+  @IsString()
+  @IsOptional()
+  title?: string;
 
   @ApiPropertyOptional({ example: 'Nội dung thông báo...' })
   @IsString()
