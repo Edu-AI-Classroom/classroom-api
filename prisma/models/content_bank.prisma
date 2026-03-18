@@ -24,6 +24,12 @@ model content_bank {
   is_public Boolean @default(false)
   owner_id  Int
 
+  source_chunk_id String?              @db.Char(36)
+  review_status   ContentReviewStatus? @default(PENDING)
+  review_note     String?
+  reviewed_by     Int?
+  reviewed_at     DateTime?            @db.Timestamp(6)
+
   // Số lần được kéo vào đề — metric tracking
   usage_count Int @default(0)
 
@@ -32,10 +38,12 @@ model content_bank {
 
   // Relations
   owner           USER             @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  reviewer        USER?            @relation("ContentBankReviewedBy", fields: [reviewed_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   subject         subject          @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
+  source_chunk    document_chunk?  @relation(fields: [source_chunk_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   document_blocks document_block[] // các block đang dùng content này
 
   @@index([owner_id])
+  @@index([source_chunk_id])
   @@index([type, subject_id, grade_level, difficulty])
 }
-

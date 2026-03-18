@@ -65,6 +65,38 @@ export class StudentQuizController {
     return this.studentQuizService.getQuizQuestions(userId, quizId);
   }
 
+  @Get(':quizId/attempts/history')
+  @Roles('STUDENT')
+  @ApiOperation({
+    summary: 'Get attempt history summary of current student for a quiz',
+  })
+  @ApiParam({ name: 'quizId', example: 'uuid' })
+  getAttemptHistory(
+    @CurrentUser('userId') userId: number,
+    @Param('quizId') quizId: string,
+  ) {
+    return this.studentQuizService.getQuizAttemptHistory(userId, quizId);
+  }
+
+  @Get(':quizId/attempts/:attemptId')
+  @Roles('STUDENT')
+  @ApiOperation({
+    summary: 'Get attempt detail with answers for current student',
+  })
+  @ApiParam({ name: 'quizId', example: 'uuid' })
+  @ApiParam({ name: 'attemptId', example: 1 })
+  getAttemptDetail(
+    @CurrentUser('userId') userId: number,
+    @Param('quizId') quizId: string,
+    @Param('attemptId') attemptId: string,
+  ) {
+    return this.studentQuizService.getQuizAttemptDetail(
+      userId,
+      quizId,
+      Number(attemptId),
+    );
+  }
+
   @Post(':quizId/attempts/start')
   @Roles('STUDENT')
   @HttpCode(HttpStatus.CREATED)

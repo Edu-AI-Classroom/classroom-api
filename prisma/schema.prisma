@@ -62,6 +62,29 @@ enum DifficultyLevel {
   HARD
 }
 
+enum ChunkType {
+  TITLE
+  HEADING
+  PARAGRAPH
+  LIST
+  TABLE
+  OTHER
+}
+
+enum DocumentIngestionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum ContentReviewStatus {
+  PENDING
+  APPROVED
+  EDITED
+  REJECTED
+}
+
 // ─────────────────────────────────────────────────────────────
 // USER & PROFILE
 // ─────────────────────────────────────────────────────────────

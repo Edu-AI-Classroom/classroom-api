@@ -15,6 +15,7 @@ model USER {
   classroom         classroom[]
   comments          comment[]
   content_bank      content_bank[]
+  reviewed_content_bank content_bank[] @relation("ContentBankReviewedBy")
   document          document[]
   approved_news     news[]              @relation("ApprovedNews")
   news_posts        news[]              @relation("UserPosts")

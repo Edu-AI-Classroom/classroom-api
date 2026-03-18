@@ -10,6 +10,15 @@ model document {
   owner_id    Int
   class_id    Int?
 
+  chunk_count Int @default(0) // số lượng block đã chia nhỏ, dùng để tracking tiến độ chunking
+  quiz_count  Int @default(0) // số lượng block có quiz, dùng để tracking tiến độ tạo quiz
+
+  source_file_url   String?                  @db.VarChar(500)
+  source_file_type  String?                  @db.VarChar(20)
+  ingestion_status  DocumentIngestionStatus? @default(PENDING)
+  ingestion_error   String?
+  ingestion_done_at DateTime?                @db.Timestamp(6)
+
   // Khi document được PUBLISHED, set timestamp này
   // Status = PUBLISHED → không cho phép sửa bất kỳ field nào
   published_at DateTime? @db.Timestamp(6)
@@ -29,11 +38,12 @@ model document {
   duplicates      document[] @relation("DocumentDuplicate")
 
   blocks      document_block[]
+  chunks      document_chunk[]
   assessments assessment[]
   quiz_meta   quiz_meta?
 
   @@index([owner_id])
   @@index([class_id])
   @@index([subject_id, grade_level])
+  @@index([ingestion_status])
 }
-

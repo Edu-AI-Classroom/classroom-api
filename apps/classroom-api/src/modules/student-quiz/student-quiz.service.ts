@@ -15,10 +15,7 @@ export class StudentQuizService {
 
   private normalizeText(value: unknown): string {
     if (typeof value !== 'string') return '';
-    return value
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, ' ');
+    return value.trim().toLowerCase().replace(/\s+/g, ' ');
   }
 
   private async assertStudentHasAccessToQuiz(userId: number, quizId: string) {
@@ -265,13 +262,118 @@ export class StudentQuizService {
     };
   }
 
+  async getQuizAttemptHistory(userId: number, quizId: string) {
+    const { assessment } = await this.assertStudentHasAccessToQuiz(
+      userId,
+      quizId,
+    );
+
+    const attempts = await this.prisma.student_submission.findMany({
+      where: {
+        student_id: userId,
+        assessment_id: assessment.assessment_id,
+      },
+      orderBy: { attempt_id: 'desc' },
+      select: {
+        attempt_id: true,
+        status: true,
+        total_score: true,
+        feedback: true,
+        started_at: true,
+        submitted_at: true,
+      },
+    });
+
+    return attempts.map((attempt) => ({
+      attemptId: attempt.attempt_id,
+      quizId,
+      status: attempt.status ?? null,
+      totalScore:
+        attempt.total_score === null || attempt.total_score === undefined
+          ? null
+          : Number(attempt.total_score),
+      feedback: attempt.feedback ?? null,
+      startedAt: attempt.started_at ?? null,
+      submittedAt: attempt.submitted_at ?? null,
+    }));
+  }
+
+  async getQuizAttemptDetail(
+    userId: number,
+    quizId: string,
+    attemptId: number,
+  ) {
+    await this.assertStudentHasAccessToQuiz(userId, quizId);
+
+    const attempt = await this.prisma.student_submission.findUnique({
+      where: { attempt_id: attemptId },
+      include: {
+        assessment: {
+          select: { doc_id: true },
+        },
+        submission_ans: {
+          orderBy: { answered_at: 'asc' },
+          include: {
+            block: {
+              select: {
+                id: true,
+                position_order: true,
+                semantic_role: true,
+                content: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!attempt) throw new NotFoundException('Attempt not found');
+    if (attempt.student_id !== userId)
+      throw new ForbiddenException('Not your attempt');
+    if (attempt.assessment?.doc_id !== quizId)
+      throw new BadRequestException('Attempt quiz mismatch');
+
+    return {
+      attemptId: attempt.attempt_id,
+      quizId,
+      status: attempt.status ?? null,
+      totalScore:
+        attempt.total_score === null || attempt.total_score === undefined
+          ? null
+          : Number(attempt.total_score),
+      feedback: attempt.feedback ?? null,
+      startedAt: attempt.started_at ?? null,
+      submittedAt: attempt.submitted_at ?? null,
+      answers: (attempt.submission_ans ?? []).map((ans) => ({
+        blockId: ans.block_id,
+        positionOrder: ans.block?.position_order ?? null,
+        type: ans.block?.semantic_role ?? null,
+        questionText:
+          ans.block?.content && typeof ans.block.content === 'object'
+            ? ((ans.block.content as Record<string, unknown>).question ?? null)
+            : null,
+        studentAnswer: ans.student_answer ?? null,
+        score:
+          ans.score === null || ans.score === undefined
+            ? null
+            : Number(ans.score),
+        feedback: ans.feedback ?? null,
+        gradingStatus: ans.grading_status ?? null,
+        answeredAt: ans.answered_at ?? null,
+      })),
+    };
+  }
+
   async submitAttempt(
     userId: number,
     quizId: string,
     attemptId: number,
     dto: SubmitQuizDto,
   ) {
-    const { assessment } = await this.assertStudentHasAccessToQuiz(userId, quizId);
+    const { assessment } = await this.assertStudentHasAccessToQuiz(
+      userId,
+      quizId,
+    );
 
     const attempt: any = await this.prisma.student_submission.findUnique({
       where: { attempt_id: attemptId } as any,
@@ -320,7 +422,10 @@ export class StudentQuizService {
       if (isEssay && expectedEssay) {
         const studentText = this.normalizeText((a.answer as any)?.text);
         const expectedText = this.normalizeText(expectedEssay);
-        score = studentText && expectedText && studentText === expectedText ? maxScore : 0;
+        score =
+          studentText && expectedText && studentText === expectedText
+            ? maxScore
+            : 0;
         gradingStatus = 'verified';
       }
 
@@ -338,7 +443,8 @@ export class StudentQuizService {
 
     const submittedAt = new Date();
     const isLate =
-      !!assessment?.due_date && submittedAt.getTime() > new Date(assessment.due_date).getTime();
+      !!assessment?.due_date &&
+      submittedAt.getTime() > new Date(assessment.due_date).getTime();
 
     const updated = await this.prisma.$transaction(async (tx: any) => {
       for (const ans of toUpsert) {

@@ -1,12 +1,24 @@
 model ai_audit_log {
-  log_id           String   @id @default(uuid()) @db.Char(36)
+  log_id           String    @id @default(uuid()) @db.Char(36)
   user_id          Int?
-  feature          String?  @db.VarChar(100)
+  status           String?   @db.VarChar(50)
+  feature          String?   @db.VarChar(100)
   created_at       DateTime? @db.Timestamp(6)
+  updated_at       DateTime? @db.Timestamp(6)
+  completed_at     DateTime? @db.Timestamp(6)
+  document_id      String?   @db.Char(36)
+  chunk_id         String?   @db.Char(36)
+  model            String?   @db.VarChar(150)
+  prompt           String?
+  answer           String?
+  error_message    String?
   interaction_data String?
   total_tokens     Int?
   cost             Decimal?  @db.Decimal(10, 6)
   rating           Int?
   request_id       String?   @db.VarChar(100)
-}
 
+  @@index([user_id, created_at])
+  @@index([document_id])
+  @@index([request_id])
+}
