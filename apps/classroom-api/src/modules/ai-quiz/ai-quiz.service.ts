@@ -1,6 +1,6 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OpenRouter } from '@openrouter/sdk';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { GenerateQuizWithAiDto } from './dtos/generate-quiz-with-ai.dto';
 
@@ -27,14 +27,14 @@ export class AiQuizService {
     private readonly prisma: PrismaService,
   ) {}
 
-  private getClient() {
-    const apiKey = this.config.get<string>('OPENROUTER_API_KEY');
+  private getClient(): GoogleGenerativeAI {
+    const apiKey = this.config.get<string>('GEMINI_API_KEY');
     if (!apiKey) {
       throw new BadRequestException(
-        'Thiếu cấu hình OPENROUTER_API_KEY trên backend',
+        'Thiếu cấu hình GEMINI_API_KEY trên backend',
       );
     }
-    return new OpenRouter({ apiKey });
+    return new GoogleGenerativeAI(apiKey);
   }
 
   private extractJsonObject(text: string) {
@@ -145,42 +145,45 @@ export class AiQuizService {
       );
     }
 
-    const language = dto.language ?? 'vi';
-    const openrouter = this.getClient();
+    const genAI = this.getClient();
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+      },
+    });
 
     const system = [
       'Bạn là trợ lý tạo đề quiz cho giáo viên.',
-      'YÊU CẦU: Trả về DUY NHẤT một JSON object hợp lệ (không markdown, không giải thích ngoài JSON).',
+      'YÊU CẦU: Trả về một JSON object hợp lệ (không giải thích ngoài JSON).',
       'JSON schema bắt buộc:',
       '{ "questions": [ { "type": "MCQ"|"ESSAY", "questionText": string, "options"?: string[], "correctIndex"?: number, "expectedAnswer"?: string, "explanation"?: string } ] }',
       'NGÔN NGỮ: TẤT CẢ nội dung (câu hỏi, phương án, giải thích, đáp án mẫu) PHẢI ĐƯỢC VIẾT BẰNG TIẾNG VIỆT.',
       `Tổng số câu: ${totalQuestions}. MCQ: ${mcqCount}. Tự luận: ${essayCount}.`,
       'MCQ: options 4 lựa chọn, correctIndex 0..3.',
-      'ESSAY: expectedAnswer BẮT BUỘC chỉ được 1 từ duy nhất (ví dụ: "3/4", "điện", "biến").',
+      'ESSAY: expectedAnswer BẮT BUỘC chỉ được 1 từ duy nhất.',
       `Mỗi câu mặc định 1 điểm (frontend sẽ set maxScore = ${pointsPerQuestion}).`,
     ].join('\n');
 
-    const stream = await openrouter.chat.send({
-      chatGenerationParams: {
-        model: 'nvidia/nemotron-3-super-120b-a12b:free',
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: dto.prompt },
-        ],
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: system }, { text: dto.prompt }],
+        },
+      ],
+      generationConfig: {
         temperature: 0.4,
-        stream: true,
       },
     });
 
-    let text = '';
-    for await (const chunk of stream as any) {
-      const content = chunk?.choices?.[0]?.delta?.content;
-      if (typeof content === 'string' && content) {
-        text += content;
-      }
-    }
+    const response = await result.response;
+    let text = response.text();
 
     text = String(text ?? '');
+    // With responseMimeType: 'application/json', the model should return valid JSON directly.
+    // No need to extract JSON object from markdown or other text.
+    // However, keeping extractJsonObject for robustness in case the model deviates.
     const jsonStr = this.extractJsonObject(text);
     if (!jsonStr) {
       throw new BadRequestException('AI không trả về JSON hợp lệ');

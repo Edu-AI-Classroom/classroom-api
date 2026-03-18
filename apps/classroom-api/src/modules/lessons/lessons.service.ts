@@ -1,11 +1,11 @@
 import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
-  BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { R2Service } from '../../infrastructure/cloudflare_r2/r2.service';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { CreateLessonDto } from './dtos/create-lesson.dto';
 import { UpdateLessonDto } from './dtos/update-lesson.dto';
 
@@ -180,9 +180,9 @@ export class LessonsService {
     if (existingLesson.owner_id !== userId)
       throw new ForbiddenException('Bạn không có quyền cập nhật bài học này');
 
-    if (existingLesson.status === 'PUBLISHED') {
+    if (existingLesson.status === 'PUBLISHED' && dto.status !== 'DRAFT') {
       throw new BadRequestException(
-        'Bài học đã xuất bản (PUBLISHED) không thể chỉnh sửa.',
+        'Bài học đã xuất bản (PUBLISHED) không thể chỉnh sửa trực tiếp. Hãy chuyển về DRAFT trước.',
       );
     }
 
@@ -192,7 +192,6 @@ export class LessonsService {
     }
 
     const newStatus = dto.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT';
-    const publishedAt = newStatus === 'PUBLISHED' ? new Date() : null;
 
     const updatedLesson = await this.prisma.document.update({
       where: { id },
@@ -200,7 +199,7 @@ export class LessonsService {
         title: dto.title || existingLesson.title,
         note: fileUrl,
         status: newStatus,
-        ...(publishedAt && { published_at: publishedAt }),
+        published_at: newStatus === 'PUBLISHED' ? new Date() : null,
         ...(dto.content && {
           blocks: {
             deleteMany: {},
