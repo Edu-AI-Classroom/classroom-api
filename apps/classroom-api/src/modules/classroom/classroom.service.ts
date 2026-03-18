@@ -14,6 +14,7 @@ import {
   CreateClassroomDto,
   CreateGroupDto,
   GroupResponseDto,
+  JoinClassDto,
   StudentResponseDto,
   TeacherResponseDto,
   UpdateClassroomDto,
@@ -60,7 +61,12 @@ export class ClassroomService {
         where: { class_id: classId } as any,
         include: {
           document: {
-            select: { id: true, title: true, type: true, created_at: true } as any,
+            select: {
+              id: true,
+              title: true,
+              type: true,
+              created_at: true,
+            } as any,
           } as any,
         } as any,
         orderBy: { start_date: 'desc' } as any,
@@ -141,7 +147,8 @@ export class ClassroomService {
           name: u?.user_name ?? '',
           email: u?.email ?? null,
         },
-        averageScore: averageScore != null ? Number(averageScore.toFixed(2)) : null,
+        averageScore:
+          averageScore != null ? Number(averageScore.toFixed(2)) : null,
         grades,
       };
     });
@@ -1191,6 +1198,90 @@ export class ClassroomService {
         'Only the classroom owner can perform this action',
       );
     }
+  }
+
+  /**
+   * Join a classroom by code
+   * Code is currently the numeric class ID
+   */
+  async joinClassByCode(
+    userId: number,
+    joinClassDto: JoinClassDto,
+  ): Promise<ClassroomResponseDto> {
+    const classId = Number(joinClassDto.classCode);
+    if (isNaN(classId)) {
+      throw new BadRequestException('Invalid class code');
+    }
+
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { class_id: classId, is_deleted: false },
+      include: {
+        subject: true,
+        USER: true,
+        teacher_classroom: true,
+        class_student: true,
+        class_group: true,
+      },
+    });
+
+    if (!classroom) {
+      throw new NotFoundException(
+        `Classroom with code ${joinClassDto.classCode} not found`,
+      );
+    }
+
+    // Check if user is already in the classroom
+    const existingStudent = await this.prisma.class_student.findUnique({
+      where: {
+        class_id_student_id: {
+          class_id: classId,
+          student_id: userId,
+        },
+      },
+    });
+
+    if (existingStudent) {
+      throw new BadRequestException(
+        'You are already enrolled in this classroom',
+      );
+    }
+
+    // Check if user is a teacher in this class
+    const existingTeacher = await this.prisma.teacher_classroom.findUnique({
+      where: {
+        teacher_id_class_id: {
+          teacher_id: userId,
+          class_id: classId,
+        },
+      },
+    });
+
+    if (existingTeacher) {
+      throw new BadRequestException(
+        'You are already a teacher in this classroom',
+      );
+    }
+
+    // Verify user has student role/profile
+    const studentProfile = await this.prisma.student.findUnique({
+      where: { student_id: userId },
+    });
+
+    if (!studentProfile) {
+      throw new ForbiddenException(
+        'Only students can join classrooms using a code',
+      );
+    }
+
+    // Enroll student
+    await this.prisma.class_student.create({
+      data: {
+        class_id: classId,
+        student_id: userId,
+      },
+    });
+
+    return this.mapClassroomToResponse(classroom, userId);
   }
 
   /**

@@ -5,6 +5,7 @@ export { ClassroomResponseDto } from './classroom-response.dto';
 export { CreateClassroomDto } from './create-classroom.dto';
 export { CreateGroupDto } from './create-group.dto';
 export { GroupResponseDto } from './group-response.dto';
+export { JoinClassDto } from './join-class.dto';
 export { StudentResponseDto } from './student-response.dto';
 export { TeacherResponseDto } from './teacher-response.dto';
 export { UpdateClassroomDto } from './update-classroom.dto';
