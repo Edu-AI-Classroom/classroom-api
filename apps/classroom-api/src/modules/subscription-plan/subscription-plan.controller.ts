@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,6 +9,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -68,6 +70,27 @@ export class SubscriptionPlanController {
   @ApiResponse({ status: 404, description: 'Không tìm thấy' })
   findByCode(@Param('sub_code') sub_code: string) {
     return this.subscriptionPlanService.findByCode(sub_code);
+  }
+
+  @Get('user/my-subscription')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Lấy thông tin subscription hiện tại của user',
+    description:
+      'Trả về trạng thái subscription, ngày hết hạn, số ngày còn lại, v.v.',
+  })
+  @ApiResponse({ status: 200, description: 'Thông tin subscription' })
+  @ApiResponse({ status: 401, description: 'Chưa đăng nhập' })
+  async getMySubscription(@Req() request: any) {
+    const userId =
+      request.user?.userId || request.user?.user_id || request.user?.id;
+
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+
+    return this.subscriptionPlanService.getUserSubscription(userId);
   }
 
   @Get(':id')

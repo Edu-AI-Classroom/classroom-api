@@ -6,6 +6,7 @@ model personal_info {
   sub_start_date DateTime?         @db.Timestamp(6)
   sub_status     String?           @db.VarChar(50)
   sub_id         Int?
+  expired_at     DateTime?         @db.Timestamp(6)
 
   subscription_plan subscription_plan? @relation(fields: [sub_id], references: [sub_id], onUpdate: NoAction, map: "fk_personal_sub")
   USER              USER               @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)

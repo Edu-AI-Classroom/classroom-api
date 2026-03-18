@@ -108,6 +108,87 @@ export class SubscriptionPlanService {
     return { message: 'Xóa gói subscription thành công' };
   }
 
+  /**
+   * Kiểm tra user có đăng ký gói còn hạn hay không
+   * Returns true nếu gói còn hạn, false nếu chưa đăng ký hoặc hết hạn
+   */
+  async isUserSubscriptionActive(userId: number): Promise<boolean> {
+    const personalInfo = await this.prisma.personal_info.findUnique({
+      where: { user_id: userId },
+      include: { subscription_plan: true },
+    });
+
+    // Chưa có đơn đăng ký
+    if (!personalInfo || !personalInfo.subscription_plan) {
+      return false;
+    }
+
+    // Kiểm tra nếu expired_at tồn tại và chưa hết hạn
+    if (personalInfo.expired_at) {
+      return personalInfo.expired_at > new Date();
+    }
+
+    // Nếu không có expired_at nhưng có subscription thì coi như chưa kích hoạt
+    return false;
+  }
+
+  /**
+   * Lấy thông tin subscription của user
+   */
+  async getUserSubscription(userId: number) {
+    if (!userId || typeof userId !== 'number') {
+      return {
+        hasSubscription: false,
+        message: 'Invalid user ID',
+      };
+    }
+
+    const personalInfo = await this.prisma.personal_info.findUnique({
+      where: { user_id: userId },
+      include: {
+        subscription_plan: true,
+      },
+    });
+
+    // Chưa đăng ký
+    if (!personalInfo || !personalInfo.subscription_plan) {
+      return {
+        hasSubscription: false,
+        message: 'Please subscribe to use AI',
+        subId: null,
+        subName: null,
+        status: null,
+        startDate: null,
+        expiredAt: null,
+        isExpired: true,
+        daysRemaining: 0,
+      };
+    }
+
+    const isExpired = personalInfo.expired_at
+      ? personalInfo.expired_at <= new Date()
+      : true;
+
+    return {
+      hasSubscription: true,
+      message: isExpired
+        ? 'Your subscription has expired, please subscribe again'
+        : 'Subscription is active',
+      subId: personalInfo.subscription_plan?.sub_id,
+      subName: personalInfo.subscription_plan?.sub_name,
+      status: personalInfo.sub_status,
+      startDate: personalInfo.sub_start_date,
+      expiredAt: personalInfo.expired_at,
+      isExpired: isExpired,
+      daysRemaining: personalInfo.expired_at
+        ? Math.ceil(
+            (personalInfo.expired_at.getTime() - new Date().getTime()) /
+              (1000 * 60 * 60 * 24),
+          )
+        : 0,
+    };
+  }
+
   private mapToResponse(plan: any) {
     return {
       subId: plan.sub_id,
