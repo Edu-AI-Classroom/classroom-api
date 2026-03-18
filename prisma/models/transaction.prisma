@@ -10,6 +10,7 @@ model transaction {
   sub_code         String?   @db.VarChar(50)
   status           String?   @default("PENDING") @db.VarChar(50)
   updated_at       DateTime? @db.Timestamp(6)
+  signature        String?   @db.VarChar(500)
 
   USER USER? @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 }
