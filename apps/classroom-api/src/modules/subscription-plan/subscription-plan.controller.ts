@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,7 +11,6 @@ import {
   Query,
   Req,
   UseGuards,
-  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -20,7 +20,6 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public, Roles } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
