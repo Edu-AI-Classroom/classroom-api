@@ -51,9 +51,6 @@ export class NewsService {
         status: 'PUBLISHED',
         media_url: mediaUrl,
         uploaded_at: new Date(),
-        user_post: {
-          connect: { user_id: userId },
-        },
       },
       include: {
         user_post: true, // Lấy tên tác giả
