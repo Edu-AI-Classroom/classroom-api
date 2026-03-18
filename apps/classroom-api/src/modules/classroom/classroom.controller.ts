@@ -33,6 +33,7 @@ import {
   CreateClassroomDto,
   CreateGroupDto,
   GroupResponseDto,
+  JoinClassDto,
   StudentResponseDto,
   TeacherResponseDto,
   UpdateClassroomDto,
@@ -185,6 +186,40 @@ Results are paginated and sorted by creation date (newest first).
       message: 'Classrooms retrieved successfully',
       data: result,
       path: '/classrooms',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('join')
+  @Roles('STUDENT')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Join a classroom by code',
+    description: `
+Students can join a classroom using a class code.
+Only users with a student profile can use this endpoint.
+If successful, the student is automatically enrolled in the classroom.
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Classroom joined successfully',
+    type: ApiResponseDto,
+  })
+  async joinClassroom(
+    @Body() joinClassDto: JoinClassDto,
+    @CurrentUser('userId') userId: number,
+  ): Promise<ApiResponseDto<ClassroomResponseDto>> {
+    const classroom = await this.classroomService.joinClassByCode(
+      userId,
+      joinClassDto,
+    );
+    return {
+      success: true,
+      statusCode: HttpStatus.OK,
+      message: 'Joined classroom successfully',
+      data: classroom,
+      path: '/classrooms/join',
       timestamp: new Date().toISOString(),
     };
   }
