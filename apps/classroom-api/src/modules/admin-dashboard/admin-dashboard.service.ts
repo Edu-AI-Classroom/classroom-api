@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 
-type DateMode = 'range' | 'month' | 'year';
+type DateMode = 'range' | 'month' | 'year' | 'quarter' | 'day';
 
 export interface AdminDateFilters {
   mode?: DateMode;
   month?: number;
   year?: number;
+  quarter?: number;
+  day?: string; // YYYY-MM-DD
   from?: string;
   to?: string;
 }
@@ -22,6 +24,7 @@ export class AdminDashboardService {
 
     const rawMonth = Number(query.month);
     const rawYear = Number(query.year);
+    const rawQuarter = Number(query.quarter);
 
     const month =
       Number.isFinite(rawMonth) && rawMonth >= 1 && rawMonth <= 12
@@ -33,12 +36,24 @@ export class AdminDashboardService {
         ? rawYear
         : now.getFullYear();
 
+    const quarter =
+      Number.isFinite(rawQuarter) && rawQuarter >= 1 && rawQuarter <= 4
+        ? rawQuarter
+        : Math.floor(now.getMonth() / 3) + 1;
+
     let from: Date;
     let to: Date;
 
     if (mode === 'year') {
       from = new Date(year, 0, 1);
       to = new Date(year + 1, 0, 1);
+    } else if (mode === 'quarter') {
+      from = new Date(year, (quarter - 1) * 3, 1);
+      to = new Date(year, quarter * 3, 1);
+    } else if (mode === 'day') {
+      const d = query.day ? new Date(query.day) : new Date();
+      from = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      to = new Date(from.getTime() + 24 * 60 * 60 * 1000);
     } else if (mode === 'range' && query.from && query.to) {
       const fromDate = new Date(query.from);
       const toDate = new Date(query.to);
