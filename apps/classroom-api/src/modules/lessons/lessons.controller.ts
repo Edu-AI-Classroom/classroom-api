@@ -4,17 +4,20 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Post,
   Put,
-  Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
+  ParseUUIDPipe,
+  Req,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiOperation,
-  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -24,6 +27,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { CreateLessonDto } from './dtos/create-lesson.dto';
 import { UpdateLessonDto } from './dtos/update-lesson.dto';
 import { LessonsService } from './lessons.service';
+import { Express } from 'express';
 
 @ApiTags('Lessons')
 @Controller('lessons')
@@ -36,96 +40,51 @@ export class LessonsController {
   @Roles('TEACHER')
   @ApiOperation({ summary: 'Create new lesson (document_type = Lesson)' })
   @ApiResponse({ status: 201, description: 'Lesson created successfully' })
-  @ApiQuery({
-    name: 'subjectId',
-    required: false,
-    type: Number,
-    description: 'ID môn học (subject.subject_id)',
-  })
-  @ApiQuery({
-    name: 'gradeLevel',
-    required: false,
-    type: Number,
-    description: 'Khối lớp',
-  })
-  @ApiBody({
-    type: CreateLessonDto,
-    description: 'Lesson payload',
-    examples: {
-      template: {
-        summary: 'Template trống để tự điền',
-        value: {
-          title: 'Nhập tiêu đề bài giảng...',
-          note: 'Ghi chú (tuỳ chọn)...',
-          gradeLevel: null,
-          subjectId: null,
-          ownerId: 1,
-          canvas: {
-            settings: {
-              backgroundColor: '#ffffff',
-            },
-            blocks: [
-              {
-                type: 'TEXT',
-                text: 'Nhập nội dung text...',
-                x: 0,
-                y: 0,
-                width: 300,
-                height: 100,
-                rotation: 0,
-                zIndex: 1,
-                style: {
-                  color: '#000000',
-                  fontSize: 24,
-                  fontWeight: 'bold',
-                  fontFamily: 'Arial',
-                },
-              },
-            ],
-          },
-        },
-      },
-    },
-  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateLessonDto })
+  @UseInterceptors(FileInterceptor('file'))
   create(
-    @Query('subjectId') subjectId: string | undefined,
-    @Query('gradeLevel') gradeLevel: string | undefined,
+    @Req() req: any, // 💡 Truyền req vào đây
     @Body() dto: CreateLessonDto,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.lessonsService.createLesson({
-      ...dto,
-      subjectId: subjectId ? Number(subjectId) : undefined,
-      gradeLevel: gradeLevel ? Number(gradeLevel) : undefined,
-    });
+    return this.lessonsService.createLesson(req.user, dto, file); // 💡 Truyền req.user
   }
 
-  @Get()
-  @ApiOperation({ summary: 'List all lessons' })
-  @ApiResponse({ status: 200, description: 'List of lessons' })
-  findAll() {
-    return this.lessonsService.listLessons();
+  @Get('class/:classId')
+  @ApiOperation({ summary: 'List all lessons by classId' })
+  findAllByClassId(
+    @Req() req: any, // 💡 Cập nhật các endpoint khác tương tự
+    @Param('classId') classId: string,
+  ) {
+    return this.lessonsService.listLessons(req.user, Number(classId));
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get lesson detail by id' })
-  @ApiResponse({ status: 200, description: 'Lesson detail' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.lessonsService.getLessonById(id);
+  findOne(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.lessonsService.getLessonById(req.user, id);
   }
 
   @Put(':id')
   @Roles('TEACHER')
-  @ApiOperation({ summary: 'Update lesson and its canvas' })
-  @ApiResponse({ status: 200, description: 'Lesson updated successfully' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateLessonDto) {
-    return this.lessonsService.updateLesson(id, dto);
+  @ApiOperation({ summary: 'Update lesson' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpdateLessonDto })
+  @UseInterceptors(FileInterceptor('file'))
+  update(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateLessonDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.lessonsService.updateLesson(req.user, id, dto, file);
   }
 
   @Delete(':id')
   @Roles('TEACHER')
   @ApiOperation({ summary: 'Delete lesson' })
-  @ApiResponse({ status: 200, description: 'Lesson deleted successfully' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.lessonsService.deleteLesson(id);
+  remove(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return this.lessonsService.deleteLesson(req.user, id);
   }
 }

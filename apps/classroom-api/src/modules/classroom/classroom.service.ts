@@ -24,6 +24,135 @@ import {
 export class ClassroomService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getClassGradebook(userId: number, classId: number) {
+    // Teachers only (but verify access first)
+    await this.verifyUserAccessToClassroom(userId, classId);
+
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { class_id: classId },
+      select: { created_by: true } as any,
+    } as any);
+
+    const isTeacher = await this.prisma.teacher_classroom.findFirst({
+      where: { class_id: classId, teacher_id: userId } as any,
+      select: { teacher_id: true } as any,
+    } as any);
+
+    // Backward compatibility: allow class owner even if teacher_classroom row is missing
+    if (!isTeacher && classroom?.created_by !== userId) {
+      throw new ForbiddenException('Only teachers can view the gradebook');
+    }
+
+    const [students, assessments] = await Promise.all([
+      this.prisma.class_student.findMany({
+        where: { class_id: classId } as any,
+        include: {
+          student: {
+            include: {
+              USER: {
+                select: { user_id: true, user_name: true, email: true } as any,
+              } as any,
+            } as any,
+          } as any,
+        } as any,
+      } as any),
+      this.prisma.assessment.findMany({
+        where: { class_id: classId } as any,
+        include: {
+          document: {
+            select: { id: true, title: true, type: true, created_at: true } as any,
+          } as any,
+        } as any,
+        orderBy: { start_date: 'desc' } as any,
+      } as any),
+    ]);
+
+    const quizzes = (assessments as any[])
+      .map((a) => a.document)
+      .filter(Boolean)
+      .filter((d: any) => d.type === 'ASSIGNMENT' || d.type === 'EXAM')
+      .map((d: any) => ({
+        id: d.id,
+        title: d.title,
+        documentType: d.type,
+        createdAt: d.created_at,
+      }));
+
+    const assessmentByDocId = new Map<string, any>();
+    for (const a of assessments as any[]) {
+      if (a.document?.id) assessmentByDocId.set(a.document.id, a);
+    }
+
+    const assessmentIds = (assessments as any[]).map((a) => a.assessment_id);
+    const submissions = assessmentIds.length
+      ? await this.prisma.student_submission.findMany({
+          where: { assessment_id: { in: assessmentIds } } as any,
+          orderBy: { attempt_id: 'desc' } as any,
+          select: {
+            attempt_id: true,
+            assessment_id: true,
+            student_id: true,
+            total_score: true,
+            status: true,
+            submitted_at: true,
+          } as any,
+        } as any)
+      : [];
+
+    // latest attempt per (student, assessment)
+    const latest = new Map<string, any>();
+    for (const s of submissions as any[]) {
+      const key = `${s.student_id}:${s.assessment_id}`;
+      if (!latest.has(key)) latest.set(key, s);
+    }
+
+    const rows = (students as any[]).map((cs) => {
+      const u = cs.student?.USER;
+      const studentId = cs.student_id;
+
+      const grades: Record<string, any> = {};
+      let total = 0;
+      let gradedCount = 0;
+
+      for (const q of quizzes) {
+        const a = assessmentByDocId.get(q.id);
+        if (!a) continue;
+        const key = `${studentId}:${a.assessment_id}`;
+        const attempt = latest.get(key);
+        const score =
+          attempt?.total_score != null ? Number(attempt.total_score) : null;
+        if (score != null) {
+          total += score;
+          gradedCount += 1;
+        }
+        grades[q.id] = {
+          attemptId: attempt?.attempt_id ?? null,
+          status: attempt?.status ?? null,
+          submittedAt: attempt?.submitted_at ?? null,
+          totalScore: score,
+        };
+      }
+
+      const averageScore = gradedCount > 0 ? total / gradedCount : null;
+
+      return {
+        student: {
+          id: u?.user_id ?? studentId,
+          name: u?.user_name ?? '',
+          email: u?.email ?? null,
+        },
+        averageScore: averageScore != null ? Number(averageScore.toFixed(2)) : null,
+        grades,
+      };
+    });
+
+    return {
+      classId,
+      quizzes,
+      rows,
+    };
+  }
+
   /**
    * Create a new classroom
    * The authenticated user becomes the owner
@@ -542,6 +671,114 @@ export class ClassroomService {
       page,
       limit,
     };
+  }
+
+  async getStudentQuizStats(classId: number, userId: number) {
+    await this.verifyUserIsTeacher(userId, classId);
+
+    const classStudents = await this.prisma.class_student.findMany({
+      where: { class_id: classId } as any,
+      select: { student_id: true } as any,
+    } as any);
+    const studentIds = classStudents
+      .map((s: any) => s.student_id)
+      .filter(Boolean);
+
+    const assessments = await this.prisma.assessment.findMany({
+      where: {
+        class_id: classId,
+        document: { type: { in: ['ASSIGNMENT', 'EXAM'] } as any },
+      } as any,
+      select: { assessment_id: true, doc_id: true } as any,
+    } as any);
+    const totalAssigned = assessments.length;
+    const assessmentIds = assessments.map((a: any) => a.assessment_id);
+    const docIds = assessments.map((a: any) => a.doc_id).filter(Boolean);
+
+    const metaList = await (this.prisma as any).quiz_meta?.findMany?.({
+      where: { document_id: { in: docIds } },
+      select: { document_id: true, total_points: true } as any,
+    });
+    const totalPointsByDoc = new Map<string, number>(
+      (metaList ?? []).map((m: any) => [
+        m.document_id,
+        Number(m.total_points ?? 0),
+      ]),
+    );
+
+    await Promise.all(
+      docIds
+        .filter(
+          (id: string) =>
+            !totalPointsByDoc.has(id) || totalPointsByDoc.get(id) === 0,
+        )
+        .map(async (docId: string) => {
+          const sum = await this.prisma.answer_key
+            .aggregate({
+              where: { block: { document_id: docId } } as any,
+              _sum: { score: true },
+            } as any)
+            .then((r: any) => Number(r?._sum?.score ?? 0));
+          totalPointsByDoc.set(docId, sum);
+        }),
+    );
+
+    const attempts = await this.prisma.student_submission.findMany({
+      where: {
+        student_id: { in: studentIds },
+        assessment_id: { in: assessmentIds },
+        OR: [{ submitted_at: { not: null } }, { status: 'SUBMITTED' }],
+      } as any,
+      orderBy: { attempt_id: 'desc' } as any,
+      select: {
+        attempt_id: true,
+        student_id: true,
+        assessment_id: true,
+        total_score: true,
+        assessment: { select: { doc_id: true } as any } as any,
+      } as any,
+    } as any);
+
+    // latest attempt per (student, assessment)
+    const latest = new Map<string, any>();
+    for (const a of attempts) {
+      const key = `${a.student_id}-${a.assessment_id}`;
+      if (!latest.has(key)) latest.set(key, a);
+    }
+
+    const acc = new Map<number, { submitted: number; pctSum: number }>();
+    for (const a of latest.values()) {
+      const sid = a.student_id;
+      if (!sid) continue;
+      const docId = a.assessment?.doc_id;
+      const totalPoints = docId ? (totalPointsByDoc.get(docId) ?? 0) : 0;
+      const score = Number(a.total_score ?? 0);
+      const pct = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
+
+      const cur = acc.get(sid) ?? { submitted: 0, pctSum: 0 };
+      cur.submitted += 1;
+      cur.pctSum += pct;
+      acc.set(sid, cur);
+    }
+
+    return studentIds.map((sid: number) => {
+      const cur = acc.get(sid) ?? { submitted: 0, pctSum: 0 };
+      const submittedCount = cur.submitted;
+      const submittedPct =
+        totalAssigned > 0
+          ? Math.round((submittedCount / totalAssigned) * 100)
+          : 0;
+      const avgGradePct =
+        submittedCount > 0 ? Math.round(cur.pctSum / submittedCount) : 0;
+
+      return {
+        studentId: sid,
+        avgGradePct,
+        submittedCount,
+        totalAssigned,
+        submittedPct,
+      };
+    });
   }
 
   /**

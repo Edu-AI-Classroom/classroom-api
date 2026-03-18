@@ -122,6 +122,31 @@ The owner has full permissions:
     };
   }
 
+  @Get(':classId/gradebook')
+  @Roles('TEACHER')
+  @ApiOperation({
+    summary: 'Get class gradebook (teacher)',
+    description:
+      'Grade matrix of all students vs quizzes/assignments in the class.',
+  })
+  async getGradebook(
+    @Param('classId') classId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
+    const data = await this.classroomService.getClassGradebook(
+      userId,
+      Number(classId),
+    );
+    return {
+      success: true,
+      statusCode: HttpStatus.OK,
+      message: 'Gradebook retrieved successfully',
+      data,
+      path: `/classrooms/${classId}/gradebook`,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   @Get()
   @Roles('TEACHER', 'STUDENT')
   @ApiOperation({
@@ -424,7 +449,7 @@ If the student is in a group, they will be automatically removed from that group
   }
 
   @Get(':classId/students')
-  @Roles('TEACHER')
+  @Roles('TEACHER', 'STUDENT')
   @ApiOperation({
     summary: 'Get all students in the classroom',
     description: `
@@ -466,6 +491,20 @@ Results include current group assignment if any.
       path: `/classrooms/${classId}/students`,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  @Get(':classId/students/stats')
+  @Roles('TEACHER')
+  @ApiOperation({
+    summary: 'Get student quiz stats for a classroom',
+    description:
+      'Return avg grade (%) and submission rate (%) per student for quizzes (ASSIGNMENT/EXAM) assigned to this class.',
+  })
+  async getStudentStats(
+    @Param('classId') classId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
+    return this.classroomService.getStudentQuizStats(classId, userId);
   }
 
   // ==================== GROUP MANAGEMENT ====================

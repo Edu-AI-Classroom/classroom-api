@@ -135,7 +135,6 @@ export class UsersService {
 
   async getCurrentSubscription(userId: number) {
     const prisma = this.prisma as any;
-
     // Lấy personal_info của user để check xem đã đăng ký sub chưa
     const personalInfo = await prisma.personal_info.findUnique({
       where: { user_id: userId },
