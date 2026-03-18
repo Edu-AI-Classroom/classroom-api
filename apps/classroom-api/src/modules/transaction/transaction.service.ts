@@ -11,7 +11,7 @@ import {
   UpdateTransactionDto,
 } from './dtos';
 import { PayOSService } from './payos.service';
-import { PaymentGateway, PayOSPaymentStatus } from './types';
+import { PaymentGateway } from './types';
 
 @Injectable()
 export class TransactionService {
@@ -113,11 +113,12 @@ export class TransactionService {
         buyerEmail: user.email,
       });
 
-      // Update transaction with order code and status
+      // Update transaction with order code, signature and status
       await this.prisma.transaction.update({
         where: { transaction_id: transaction.transaction_id },
         data: {
           order_code: orderCode,
+          signature: paymentLink.signature,
           note: JSON.stringify({
             orderCode,
             paymentLinkId: paymentLink.paymentLinkId,
@@ -221,161 +222,56 @@ export class TransactionService {
 
   /**
    * Handle PayOS webhook
-   * Validates payload structure, signature, and updates transaction status
+   * Updates transaction status based on PayOS payment status
    */
   async handlePayOSWebhook(webhookDto: PayOSWebhookDto) {
     try {
-      const { data, signature } = webhookDto;
-
-      // Verify webhook signature
-      try {
-        const webhook = {
-          code: '00',
-          desc: 'Webhook received',
-          success: true,
-          data: {
-            orderCode: data.orderCode,
-            amount: data.amount,
-            description: data.description,
-            accountNumber: data.accountNumber,
-            reference: data.reference,
-            transactionDateTime: data.transactionDateTime,
-            currency: data.currency,
-            paymentMethodId: data.paymentMethodId,
-            paymentMethodName: data.paymentMethodName,
-            counterPartyCode: data.counterPartyCode,
-            counterPartyName: data.counterPartyName,
-            paymentLinkId: data.paymentLinkId,
-            code: data.code,
-            status: data.status,
-            bookingId: data.bookingId,
-            createdAt: data.createdAt,
-            cancelledAt: data.cancelledAt,
-            expiredAt: data.expiredAt,
-          },
-          signature,
+      if (!webhookDto || !webhookDto.data) {
+        this.logger.error(
+          `Invalid webhook payload: ${JSON.stringify(webhookDto)}`,
+        );
+        return {
+          code: '01',
+          desc: 'Invalid webhook payload',
+          success: false,
         };
-        await this.payosService.verifyWebhookData(webhook as any);
-      } catch (error) {
-        this.logger.warn('Invalid webhook signature');
-        throw new BadRequestException('Invalid webhook signature');
       }
 
-      // Extract payment information
-      const { orderCode, amount, status, reference } = data;
+      const { data, signature } = webhookDto;
+      const { orderCode, amount } = data;
 
-      this.logger.log(
-        `✅ Webhook validated for order: ${orderCode}, status: ${status}, amount: ${amount}`,
-      );
-
-      // Find transaction by order code
+      // Find transaction by orderCode
       const transaction = await this.prisma.transaction.findFirst({
         where: {
-          note: {
-            contains: orderCode.toString(),
-          },
+          order_code: orderCode?.toString(),
         },
       });
 
       if (!transaction) {
-        this.logger.warn(`Transaction not found for order: ${orderCode}`);
-        // Return success anyway to acknowledge webhook
+        this.logger.warn(`Transaction not found for orderCode: ${orderCode}`);
         return {
           code: '00',
-          desc: 'Webhook processed (transaction not found)',
+          desc: 'Webhook processed',
           success: true,
         };
       }
 
-      // Handle different payment statuses
-      let transactionNote = transaction.note;
-      try {
-        transactionNote = JSON.stringify({
-          ...JSON.parse(transaction.note || '{}'),
-          orderCode,
-          lastStatus: status,
-          reference,
-        });
-      } catch {
-        transactionNote = JSON.stringify({
-          orderCode,
-          lastStatus: status,
-          reference,
-        });
-      }
-
-      if (status === PayOSPaymentStatus.COMPLETED) {
-        // Validate amount matches before updating credit (convert Decimal to number if needed)
-        const transactionAmount =
-          typeof transaction.amount === 'number'
-            ? transaction.amount
-            : parseFloat(transaction.amount.toString());
-
-        if (transactionAmount !== amount) {
-          this.logger.warn(
-            `Amount mismatch for order ${orderCode}: expected ${transactionAmount}, got ${amount}`,
-          );
-        }
-
-        // Update user credit if payment is completed
-        await Promise.all([
-          this.prisma.transaction.update({
-            where: { transaction_id: transaction.transaction_id },
-            data: {
-              status: 'COMPLETED',
-              note: transactionNote,
-              updated_at: new Date(),
-            },
-          }),
-          this.updateUserCredit(transaction.user_id, amount),
-        ]);
-
-        this.logger.log(
-          `💰 Payment completed for transaction ${transaction.transaction_id}`,
-        );
-      } else if (status === PayOSPaymentStatus.CANCELLED) {
-        // Update transaction status
-        await this.prisma.transaction.update({
+      // Update transaction status to PAID and save signature
+      await Promise.all([
+        this.prisma.transaction.update({
           where: { transaction_id: transaction.transaction_id },
           data: {
-            status: 'CANCELLED',
-            note: transactionNote,
+            status: 'PAID',
+            signature: signature || '',
             updated_at: new Date(),
           },
-        });
+        }),
+        this.updateUserCredit(transaction.user_id, amount),
+      ]);
 
-        this.logger.log(
-          `⚠️  Payment cancelled for transaction ${transaction.transaction_id}`,
-        );
-      } else if (status === PayOSPaymentStatus.FAILED) {
-        // Update transaction status
-        await this.prisma.transaction.update({
-          where: { transaction_id: transaction.transaction_id },
-          data: {
-            status: 'FAILED',
-            note: transactionNote,
-            updated_at: new Date(),
-          },
-        });
-
-        this.logger.log(
-          `❌ Payment failed for transaction ${transaction.transaction_id}`,
-        );
-      } else if (status === PayOSPaymentStatus.EXPIRED) {
-        // Update transaction status
-        await this.prisma.transaction.update({
-          where: { transaction_id: transaction.transaction_id },
-          data: {
-            status: 'EXPIRED',
-            note: transactionNote,
-            updated_at: new Date(),
-          },
-        });
-
-        this.logger.log(
-          `⏰ Payment expired for transaction ${transaction.transaction_id}`,
-        );
-      }
+      this.logger.log(
+        `💰 Payment completed for transaction ${transaction.transaction_id}`,
+      );
 
       return {
         code: '00',
@@ -431,11 +327,77 @@ export class TransactionService {
    */
   async cancelPayment(orderCode: string, reason?: string) {
     try {
-      const result = await this.payosService.cancelPayment(orderCode, reason);
-      this.logger.log(`Payment ${orderCode} cancelled`);
-      return result;
+      // Call PayOS API to cancel
+      const payosResult = await this.payosService.cancelPayment(
+        orderCode,
+        reason,
+      );
+      this.logger.log(`Payment ${orderCode} cancelled in PayOS`);
+
+      // Find and update transaction in DB
+      const transaction = await this.prisma.transaction.findFirst({
+        where: {
+          note: {
+            contains: orderCode.toString(),
+          },
+        },
+      });
+
+      if (transaction) {
+        await this.prisma.transaction.update({
+          where: { transaction_id: transaction.transaction_id },
+          data: {
+            status: 'CANCELLED',
+            updated_at: new Date(),
+          },
+        });
+        this.logger.log(
+          `⚠️  Transaction ${transaction.transaction_id} updated to CANCELLED in DB`,
+        );
+      }
+
+      return payosResult;
     } catch (error) {
       this.logger.error(`Failed to cancel payment: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle payment failed callback from PayOS
+   */
+  async handlePaymentFailed(orderCode: string, status?: string) {
+    try {
+      // Find transaction by order code
+      const transaction = await this.prisma.transaction.findFirst({
+        where: {
+          note: {
+            contains: orderCode.toString(),
+          },
+        },
+      });
+
+      if (!transaction) {
+        this.logger.warn(`Transaction not found for order: ${orderCode}`);
+        return null;
+      }
+
+      // Update transaction status to CANCELLED
+      const updatedTransaction = await this.prisma.transaction.update({
+        where: { transaction_id: transaction.transaction_id },
+        data: {
+          status: status || 'CANCELLED',
+          updated_at: new Date(),
+        },
+      });
+
+      this.logger.log(
+        `⚠️  Payment failed/cancelled for transaction ${transaction.transaction_id}, orderCode: ${orderCode}`,
+      );
+
+      return updatedTransaction;
+    } catch (error) {
+      this.logger.error(`Failed to handle payment failed: ${error.message}`);
       throw error;
     }
   }

@@ -13,16 +13,16 @@ import { LessonsModule } from '../modules/lessons/lessons.module';
 // import { PaymentModule } from '../modules/payment/payment.module';
 // import { AssignmentModule } from '@/modules/assignment/assignment.module';
 import { R2Module } from '../infrastructure/cloudflare_r2/r2.module';
-import { AdminDashboardModule } from '../modules/admin-dashboard/admin-dashboard.module';
+import { AdminModule } from '../modules/admin/admin.module';
+import { AiQuizModule } from '../modules/ai-quiz/ai-quiz.module';
 import { CommentsModule } from '../modules/comment/comments.module';
 import { NewsModule } from '../modules/new/news.module';
+import { StudentQuizModule } from '../modules/student-quiz/student-quiz.module';
 import { SubjectModule } from '../modules/subject/subject.module';
 import { SubscriptionPlanModule } from '../modules/subscription-plan/subscription-plan.module';
+import { TeacherQuizModule } from '../modules/teacher-quiz/teacher-quiz.module';
 import { TransactionModule } from '../modules/transaction/transaction.module';
 import { UsersModule } from '../modules/users/users.module';
-import { TeacherQuizModule } from '../modules/teacher-quiz/teacher-quiz.module';
-import { StudentQuizModule } from '../modules/student-quiz/student-quiz.module';
-import { AiQuizModule } from '../modules/ai-quiz/ai-quiz.module';
 @Module({
   providers: [
     {
@@ -45,7 +45,7 @@ import { AiQuizModule } from '../modules/ai-quiz/ai-quiz.module';
     SubscriptionPlanModule,
     UsersModule,
     TransactionModule,
-    AdminDashboardModule,
+    AdminModule,
     ClassroomModule,
     // PaymentModule,
     NewsModule,

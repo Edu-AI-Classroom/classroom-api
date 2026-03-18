@@ -23,7 +23,7 @@ export class NewsService {
     file?: Express.Multer.File,
   ): Promise<NewsResponseDto> {
     // Sử dụng camelCase từ DTO mới
-    const { classId, content, audience, isPinned } = createNewsDto;
+    const { classId, content, audience, isPinned, title } = createNewsDto;
 
     // 1. Verify access
     await this.verifyClassroomAccess(userId, classId);
@@ -35,6 +35,7 @@ export class NewsService {
     }
 
     // 3. Save to DB
+    const newsTitle = title || content.substring(0, 100);
     const news = await this.prisma.news.create({
       data: {
         classroom: {

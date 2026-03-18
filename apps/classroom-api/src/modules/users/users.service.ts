@@ -135,44 +135,69 @@ export class UsersService {
 
   async getCurrentSubscription(userId: number) {
     const prisma = this.prisma as any;
+    // Lấy personal_info của user để check xem đã đăng ký sub chưa
+    const personalInfo = await prisma.personal_info.findUnique({
+      where: { user_id: userId },
+      include: {
+        subscription_plan: true,
+      },
+    });
 
-    const latestTransaction = await prisma.transaction.findFirst({
+    // Nếu không có personal_info hoặc chưa có sub_id
+    if (!personalInfo || !personalInfo.sub_id) {
+      return null;
+    }
+
+    // Kiểm tra transaction gần nhất có status = 'COMPLETED'
+    const transaction = await prisma.transaction.findFirst({
       where: {
         user_id: userId,
-        status: 'SUCCESS',
-        sub_code: {
-          not: null,
-        },
+        status: 'COMPLETED',
       },
       orderBy: {
         created_at: 'desc',
       },
     });
 
-    if (!latestTransaction || !latestTransaction.sub_code) {
+    // Nếu không có transaction thành công, không trả về gì
+    if (!transaction) {
       return null;
     }
 
-    const plan = await prisma.subscription_plan.findUnique({
-      where: { sub_code: latestTransaction.sub_code },
-    });
+    const subscriptionPlan = personalInfo.subscription_plan;
+    const startDate = transaction.created_at;
 
-    if (!plan) {
+    if (!subscriptionPlan || !startDate) {
       return null;
     }
 
+    // Tính ngày hết hạn
+    const durationDays = subscriptionPlan.duration_days || 30;
+    const expiryDate = new Date(startDate);
+    expiryDate.setDate(expiryDate.getDate() + durationDays);
+
+    // Tính số ngày còn lại
+    const now = new Date();
+    const timeDifference = expiryDate.getTime() - now.getTime();
+    const daysRemaining = Math.ceil(timeDifference / (1000 * 3600 * 24));
+
+    // Kiểm tra hết hạn
+    const isExpired = now > expiryDate;
+
+    // Nếu hết hạn, không trả về gì
+    if (isExpired) {
+      return null;
+    }
+
+    // Nếu còn hạn, trả về thông tin subscription
     return {
-      subId: plan.sub_id,
-      subCode: plan.sub_code,
-      subName: plan.sub_name,
-      price: plan.price,
-      durationDays: plan.duration_days,
-      aiTokenLimit: plan.ai_token_limit,
-      aiRequestLimit: plan.ai_request_limit,
-      maxClasses: plan.max_classes,
-      maxDocuments: plan.max_documents,
-      isActive: plan.is_active,
-      lastPaymentAt: latestTransaction.created_at,
+      status: 'ACTIVE',
+      subscriptionName: subscriptionPlan.sub_name,
+      subscriptionCode: subscriptionPlan.sub_code,
+      startDate,
+      expiryDate,
+      daysRemaining,
+      subscriptionStatus: 'ACTIVE',
     };
   }
 
