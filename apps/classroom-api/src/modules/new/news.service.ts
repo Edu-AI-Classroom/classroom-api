@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PaginationDto } from '../../common/dto/pagination.dto';
-import { R2Service } from '../../infrastructure/cloudflare_r2/r2.service'; // Giữ nguyên path của bạn
+import { R2Service } from '../../infrastructure/cloudflare_r2/r2.service';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { CreateNewsDto } from './dto/create-news.dto';
 import { NewsResponseDto } from './dto/news-response.dto';
@@ -26,7 +26,7 @@ export class NewsService {
     const { classId, content, audience, isPinned, title } = createNewsDto;
 
     // 1. Verify access
-    await this.verifyTeacherAccess(userId, classId);
+    await this.verifyClassroomAccess(userId, classId);
 
     // 2. Handle File Upload với R2Service
     let mediaUrl = null;
@@ -38,10 +38,13 @@ export class NewsService {
     const newsTitle = title || content.substring(0, 100);
     const news = await this.prisma.news.create({
       data: {
-        title: newsTitle,
         classroom: {
           connect: { class_id: classId },
         },
+        user_post: {
+          connect: { user_id: userId },
+        },
+        title: 'Announcement',
         content: content,
         audience: audience || 'all',
         is_pinned: isPinned || false,
@@ -176,7 +179,7 @@ export class NewsService {
 
   // --- Helpers ---
 
-  private async verifyTeacherAccess(userId: number, classId: number) {
+  private async verifyClassroomAccess(userId: number, classId: number) {
     const classroom = await this.prisma.classroom.findFirst({
       where: {
         class_id: classId,
@@ -184,6 +187,7 @@ export class NewsService {
         OR: [
           { created_by: userId },
           { teacher_classroom: { some: { teacher_id: userId } } },
+          { class_student: { some: { student_id: userId } } },
         ],
       },
     });
@@ -200,6 +204,10 @@ export class NewsService {
     return {
       id: news.news_id.toString(), // Frontend cần ID dạng string
       author: news.user_post?.user_name || 'Unknown',
+      authorRole: (news.user_post?.role?.toLowerCase() || 'student') as
+        | 'teacher'
+        | 'student'
+        | 'parent',
       content: news.content || '',
       createdAt: news.uploaded_at?.toISOString(),
       isPinned: news.is_pinned || false,

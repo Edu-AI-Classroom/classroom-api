@@ -25,6 +25,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import multer from 'multer';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator'; // <--- Use your existing file
@@ -33,10 +34,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CreateNewsWithMediaDto } from './dto/create-news-with-media.dto';
 import { NewsResponseDto } from './dto/news-response.dto';
-import { UpdateNewsDto } from './dto/update-news.dto';
-import { NewsService } from './news.service';
 import { UpdateNewsWithMediaDto } from './dto/update-news-with-media.dto';
-import multer from 'multer';
+import { NewsService } from './news.service';
 
 @ApiTags('News')
 @Controller('news')
@@ -46,7 +45,7 @@ export class NewsController {
   constructor(private readonly newsService: NewsService) {}
 
   @Post()
-  @Roles('TEACHER', 'ADMIN')
+  @Roles('TEACHER', 'STUDENT', 'ADMIN')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create a news post',
@@ -122,7 +121,7 @@ export class NewsController {
   }
 
   @Put(':id')
-  @Roles('TEACHER', 'ADMIN')
+  @Roles('TEACHER', 'STUDENT', 'ADMIN')
   @ApiOperation({ summary: 'Update a news post' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
@@ -153,7 +152,7 @@ export class NewsController {
   }
 
   @Delete(':id')
-  @Roles('TEACHER')
+  @Roles('TEACHER', 'STUDENT')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a news post' })
   async remove(

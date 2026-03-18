@@ -1,0 +1,13 @@
+model book_section {
+  section_id      Int    @id @default(autoincrement())
+  book_id         Int?
+  chapter_title   String? @db.VarChar(255)
+  section_title   String? @db.VarChar(255)
+  hierarchy_level Int?
+  page_from       Int?
+  page_to         Int?
+
+  book           book?            @relation(fields: [book_id], references: [book_id], onDelete: NoAction, onUpdate: NoAction)
+  knowledge_unit knowledge_unit[]
+}
+

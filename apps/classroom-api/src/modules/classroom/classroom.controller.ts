@@ -92,7 +92,7 @@ The owner has full permissions:
   }
 
   @Get(':classId')
-  @Roles('TEACHER')
+  @Roles('TEACHER', 'STUDENT')
   @ApiOperation({
     summary: 'Get classroom details',
     description: 'Retrieve detailed information about a specific classroom.',
@@ -123,7 +123,7 @@ The owner has full permissions:
   }
 
   @Get()
-  @Roles('TEACHER')
+  @Roles('TEACHER', 'STUDENT')
   @ApiOperation({
     summary: 'List my classrooms',
     description: `

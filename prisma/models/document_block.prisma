@@ -1,0 +1,38 @@
+model document_block {
+  id          String       @id @default(uuid()) @db.Char(36)
+  document_id String       @db.Char(36)
+  block_type  BlockType
+  semantic_role SemanticRole @default(BLANK)
+
+  // Thứ tự hiển thị — float để insert giữa dễ dàng (1.0, 1.5, 2.0)
+  position_order Float @default(0)
+
+  // Payload đầy đủ của block — copy từ content_bank hoặc nhập tay
+  // NULL = block còn trống (chưa gắn content)
+  // MCQ:     {"question": "...", "options": [...], "correct_index": 2}
+  // READING: {"title": "...", "body": "..."}
+  // MEDIA:   {"url": "...", "media_type": "image", "caption": "..."}
+  content Json?
+
+  // FK về nguồn gốc — nullable, set null nếu content_bank bị xóa
+  // Dùng để: hiển thị badge "Có bản mới hơn trong ngân hàng", track usage
+  content_bank_id String? @db.Char(36)
+
+  // Ghi đè một số field của content trong context đề này
+  // Ví dụ: {"score": 5, "time_limit": 120}
+  // NULL = dùng nguyên bản từ content
+  override_data Json?
+
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  // Relations
+  document     document      @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  content_bank content_bank? @relation(fields: [content_bank_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  answer_key   answer_key?
+  submission_ans submission_ans[]
+
+  @@index([document_id])
+  @@index([position_order])
+  @@index([content_bank_id])
+}
+

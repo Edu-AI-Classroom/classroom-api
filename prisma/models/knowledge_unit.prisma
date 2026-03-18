@@ -1,0 +1,14 @@
+model knowledge_unit {
+  unit_id            Int    @id @default(autoincrement())
+  section_id         Int?
+  unit_type          String? @db.VarChar(50)
+  learning_objective String?
+  content            String?
+  citation           String? @db.VarChar(255)
+  embedding          String?
+  updated_at         DateTime? @db.Timestamp(6)
+
+  book_section     book_section?      @relation(fields: [section_id], references: [section_id], onDelete: NoAction, onUpdate: NoAction)
+  student_ku_state student_ku_state[]
+}
+

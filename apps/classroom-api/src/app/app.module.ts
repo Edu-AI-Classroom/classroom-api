@@ -11,11 +11,12 @@ import { ClassroomModule } from '../modules/classroom/classroom.module';
 import { HealthModule } from '../modules/health/health.module';
 import { LessonsModule } from '../modules/lessons/lessons.module';
 // import { PaymentModule } from '../modules/payment/payment.module';
-import { AssignmentModule } from '@/modules/assignment/assignment.module';
+// import { AssignmentModule } from '@/modules/assignment/assignment.module';
 import { R2Module } from '../infrastructure/cloudflare_r2/r2.module';
 import { AdminModule } from '../modules/admin/admin.module';
 import { CommentsModule } from '../modules/comment/comments.module';
 import { NewsModule } from '../modules/new/news.module';
+import { SubjectModule } from '../modules/subject/subject.module';
 import { SubscriptionPlanModule } from '../modules/subscription-plan/subscription-plan.module';
 import { TransactionModule } from '../modules/transaction/transaction.module';
 import { UsersModule } from '../modules/users/users.module';
@@ -46,8 +47,8 @@ import { UsersModule } from '../modules/users/users.module';
     NewsModule,
     CommentsModule,
     R2Module,
-    AssignmentModule,
-    AdminModule,
+    // AssignmentModule,
+    SubjectModule,
   ],
   controllers: [],
 })

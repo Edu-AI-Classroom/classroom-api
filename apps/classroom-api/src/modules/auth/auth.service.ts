@@ -1,9 +1,16 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { LoginDto } from './dtos/login.dto';
+import { RegisterDto } from './dtos/register.dto';
+
+const SALT_ROUNDS = 10;
 
 export interface JwtPayload {
   sub: number;
@@ -67,6 +74,68 @@ export class AuthService {
 
     return {
       message: 'Đăng nhập thành công',
+      access_token,
+      expires_in: expiresIn,
+      user,
+    };
+  }
+
+  async register(dto: RegisterDto) {
+    const prisma = this.prisma as any;
+
+    const existing = await prisma.USER.findUnique({
+      where: { email: dto.email },
+    });
+    if (existing) {
+      throw new ConflictException({
+        message: 'Email đã được sử dụng',
+        error: 'EMAIL_ALREADY_USED',
+      });
+    }
+
+    const password_hash = await bcrypt.hash(dto.password, SALT_ROUNDS);
+    const role = dto.role ?? 'STUDENT';
+
+    const created = await prisma.$transaction(async (tx: any) => {
+      const userCreated = await tx.uSER.create({
+        data: {
+          user_name: dto.name,
+          email: dto.email,
+          password_hash,
+          role,
+          profile_picture: null,
+          is_active: true,
+          credit: 0,
+        },
+      });
+
+      if (role === 'STUDENT') {
+        await tx.student.create({
+          data: {
+            student_id: userCreated.user_id,
+          },
+        });
+      }
+
+      if (role === 'TEACHER') {
+        await tx.teacher.create({
+          data: {
+            teacher_id: userCreated.user_id,
+          },
+        });
+      }
+
+      return userCreated;
+    });
+
+    const user = this.mapToAuthUser(created);
+    const payload: JwtPayload = { sub: user.userId, email: user.email };
+    const expiresIn =
+      this.configService.get<string>('auth.jwt.expiresIn') || '7d';
+    const access_token = this.jwtService.sign(payload, { expiresIn } as object);
+
+    return {
+      message: 'Đăng ký thành công',
       access_token,
       expires_in: expiresIn,
       user,

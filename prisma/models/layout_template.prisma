@@ -1,0 +1,13 @@
+model layout_template {
+  template_id         Int      @id @default(autoincrement())
+  template_name       String?  @db.VarChar(255)
+  description         String?
+  preview_thumbnail   String?  @db.VarChar(500)
+  template_type       String?  @db.VarChar(50)
+  schema_definition   String?
+  structure_blueprint String?
+  ai_rule             String?
+  visibility          String?  @db.VarChar(20)
+  created_at          DateTime? @db.Timestamp(6)
+}
+

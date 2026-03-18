@@ -1,0 +1,11 @@
+model class_student {
+  class_id   Int
+  student_id Int
+  joined_at  DateTime? @db.Timestamp(6)
+
+  classroom classroom @relation(fields: [class_id], references: [class_id], onDelete: NoAction, onUpdate: NoAction)
+  student   student   @relation(fields: [student_id], references: [student_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([class_id, student_id])
+}
+

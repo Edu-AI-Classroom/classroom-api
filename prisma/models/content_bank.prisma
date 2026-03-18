@@ -1,0 +1,41 @@
+model content_bank {
+  id   String      @id @default(uuid()) @db.Char(36)
+  type ContentType
+
+  // Phân loại nội dung
+  subject_id  Int
+  grade_level Int
+  book_id     Int?
+  chapter_id  Int?
+  section_id  Int?
+
+  // Nội dung thực tế — overwrite trực tiếp khi teacher sửa
+  // VIDEO:    {"url": "...", "duration": 120, "thumbnail": "..."}
+  // QUIZ_MCQ: {"question": "...", "options": [...], "correct_index": 2}
+  // READING:  {"title": "...", "body": "...", "word_count": 500}
+  payload Json
+
+  // Metadata tìm kiếm
+  tags            String[]
+  difficulty      DifficultyLevel?
+  cognitive_level String?          @db.VarChar(50)
+
+  // Hiển thị công khai hay chỉ owner
+  is_public Boolean @default(false)
+  owner_id  Int
+
+  // Số lần được kéo vào đề — metric tracking
+  usage_count Int @default(0)
+
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @db.Timestamp(6)
+
+  // Relations
+  owner           USER             @relation(fields: [owner_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  subject         subject          @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction)
+  document_blocks document_block[] // các block đang dùng content này
+
+  @@index([owner_id])
+  @@index([type, subject_id, grade_level, difficulty])
+}
+
