@@ -256,20 +256,7 @@ export class TransactionService {
         };
       }
 
-      // Get subscription plan to calculate expired_at
-      const subscriptionPlan = await this.prisma.subscription_plan.findUnique({
-        where: { sub_code: transaction.sub_code },
-      });
-
-      // Calculate expired_at = created_at + duration_days
-      let expiredAt: Date | null = null;
-      if (subscriptionPlan && subscriptionPlan.duration_days) {
-        expiredAt = new Date(transaction.created_at);
-        expiredAt.setDate(expiredAt.getDate() + subscriptionPlan.duration_days);
-      }
-
       // Update transaction status to PAID and save signature
-      // Also update personal_info with subscription details and expired_at
       await Promise.all([
         this.prisma.transaction.update({
           where: { transaction_id: transaction.transaction_id },
@@ -279,25 +266,6 @@ export class TransactionService {
             updated_at: new Date(),
           },
         }),
-        // Update personal_info with subscription
-        subscriptionPlan
-          ? this.prisma.personal_info.upsert({
-              where: { user_id: transaction.user_id },
-              update: {
-                sub_id: subscriptionPlan.sub_id,
-                sub_start_date: transaction.created_at,
-                expired_at: expiredAt,
-                sub_status: 'ACTIVE',
-              },
-              create: {
-                user_id: transaction.user_id,
-                sub_id: subscriptionPlan.sub_id,
-                sub_start_date: transaction.created_at,
-                expired_at: expiredAt,
-                sub_status: 'ACTIVE',
-              },
-            })
-          : Promise.resolve(),
         this.updateUserCredit(transaction.user_id, amount),
       ]);
 
