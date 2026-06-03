@@ -1,15 +1,26 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthService, AuthUser } from './auth.service';
+import { Request, Response } from 'express';
+import { AuthService, type AuthUser } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { CompleteGoogleRegistrationDto } from './dtos/complete-google-registration.dto';
 import { Public } from './decorators/public.decorator';
 import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Auth')
@@ -35,6 +46,16 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
+  @Post('google/complete-registration')
+  @ApiOperation({ summary: 'Hoàn tất đăng ký với Google' })
+  @ApiResponse({ status: 201, description: 'Success' })
+  completeGoogleRegistration(
+    @CurrentUser('userId') userId: number,
+    @Body() dto: CompleteGoogleRegistrationDto,
+  ) {
+    return this.authService.completeGoogleRegistration(userId, dto);
+  }
+
   @Get('profile')
   // Không cần @ApiBearerAuth ở đây nữa nếu đã có ở cấp Class
   @ApiOperation({ summary: 'Lấy thông tin profile' })
@@ -48,5 +69,39 @@ export class AuthController {
       message: 'OK',
       data: user,
     };
+  }
+
+  @Public()
+  @Get('google')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Bắt đầu đăng nhập Google OAuth' })
+  @ApiResponse({ status: 302, description: 'Chuyển hướng đến Google' })
+  googleAuth() {
+    // Passport tự động redirect đến Google consent screen
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({
+    summary: 'Google OAuth callback - redirect về frontend kèm JWT',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirect về frontend kèm access_token',
+  })
+  @ApiResponse({ status: 401, description: 'Xác thực Google thất bại' })
+  async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+    const user = req.user as AuthUser;
+    const { access_token, expires_in } = this.authService.signToken(user);
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = new URL(`${frontendUrl}/callback`);
+    redirectUrl.hash = new URLSearchParams({
+      access_token,
+      expires_in,
+    }).toString();
+
+    return res.redirect(redirectUrl.toString());
   }
 }

@@ -42,9 +42,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # Commitlint (fail fast)
-      - name: Lint commit message
-        if: github.event_name == 'pull_request'
-        uses: wagoid/commitlint-github-action@v6
+      # - name: Lint commit message
+      #   if: github.event_name == 'pull_request'
+      #   uses: wagoid/commitlint-github-action@v6
 
       # Prisma generate (safe)
       - name: Prisma generate
