@@ -97,8 +97,10 @@ export class AuthController {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const redirectUrl = new URL(`${frontendUrl}/callback`);
-    redirectUrl.searchParams.set('access_token', access_token);
-    redirectUrl.searchParams.set('expires_in', expires_in);
+    redirectUrl.hash = new URLSearchParams({
+      access_token,
+      expires_in,
+    }).toString();
 
     res.redirect(redirectUrl.toString());
   }
