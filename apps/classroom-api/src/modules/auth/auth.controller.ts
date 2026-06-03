@@ -102,6 +102,6 @@ export class AuthController {
       expires_in,
     }).toString();
 
-    res.redirect(redirectUrl.toString());
+    return res.redirect(redirectUrl.toString());
   }
 }
