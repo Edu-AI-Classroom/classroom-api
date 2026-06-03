@@ -23,8 +23,8 @@ export class GoogleOAuthStrategy extends PassportStrategy(Strategy, 'google') {
   ) {
     return this.authService.findOrCreateGoogleUser({
       email: profile.emails?.[0]?.value,
-      firstName: profile.name?.givenName,
-      lastName: profile.name?.familyName,
+      firstName: profile.name?.givenName || profile.displayName || '',
+      lastName: profile.name?.familyName || '',
       picture: profile.photos?.[0]?.value,
     });
   }

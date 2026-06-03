@@ -1,11 +1,19 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { AuthService, AuthUser } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
@@ -64,17 +72,23 @@ export class AuthController {
   @Public()
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  @ApiOperation({ summary: 'Google OAuth callback - trả về JWT' })
+  @ApiOperation({
+    summary: 'Google OAuth callback - redirect về frontend kèm JWT',
+  })
   @ApiResponse({
-    status: 200,
-    description: 'Đăng nhập Google thành công, trả về JWT',
+    status: 302,
+    description: 'Redirect về frontend kèm access_token',
   })
   @ApiResponse({ status: 401, description: 'Xác thực Google thất bại' })
-  async googleAuthCallback(@Req() req: Request) {
+  async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user as AuthUser;
-    return {
-      ...this.authService.signToken(user),
-      message: 'Đăng nhập Google thành công',
-    };
+    const { access_token, expires_in } = this.authService.signToken(user);
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = new URL(`${frontendUrl}/auth/callback`);
+    redirectUrl.searchParams.set('access_token', access_token);
+    redirectUrl.searchParams.set('expires_in', expires_in);
+
+    res.redirect(redirectUrl.toString());
   }
 }

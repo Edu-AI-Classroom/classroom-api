@@ -137,10 +137,14 @@ export class AuthService {
       return this.mapToAuthUser(existing);
     }
 
+    const displayName =
+      [profile.firstName, profile.lastName].filter(Boolean).join(' ').trim() ||
+      profile.email.split('@')[0];
+
     const created = await prisma.$transaction(async (tx: any) => {
       const userCreated = await tx.uSER.create({
         data: {
-          user_name: `${profile.firstName} ${profile.lastName}`.trim(),
+          user_name: displayName,
           email: profile.email,
           password_hash: null,
           role: 'STUDENT',
