@@ -14,8 +14,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Request, Response } from 'express';
-import { AuthService, AuthUser } from './auth.service';
+import { AuthService, type AuthUser } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { CompleteGoogleRegistrationDto } from './dtos/complete-google-registration.dto';
 import { Public } from './decorators/public.decorator';
 import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
@@ -43,6 +44,16 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Success' })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Post('google/complete-registration')
+  @ApiOperation({ summary: 'Hoàn tất đăng ký với Google' })
+  @ApiResponse({ status: 201, description: 'Success' })
+  completeGoogleRegistration(
+    @CurrentUser('userId') userId: number,
+    @Body() dto: CompleteGoogleRegistrationDto,
+  ) {
+    return this.authService.completeGoogleRegistration(userId, dto);
   }
 
   @Get('profile')
@@ -85,7 +96,7 @@ export class AuthController {
     const { access_token, expires_in } = this.authService.signToken(user);
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const redirectUrl = new URL(`${frontendUrl}/auth/callback`);
+    const redirectUrl = new URL(`${frontendUrl}/callback`);
     redirectUrl.searchParams.set('access_token', access_token);
     redirectUrl.searchParams.set('expires_in', expires_in);
 
