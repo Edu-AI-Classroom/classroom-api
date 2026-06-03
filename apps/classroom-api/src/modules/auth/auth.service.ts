@@ -66,18 +66,7 @@ export class AuthService {
         error: 'INVALID_CREDENTIALS',
       });
     }
-
-    const payload: JwtPayload = { sub: user.userId, email: user.email };
-    const expiresIn =
-      this.configService.get<string>('auth.jwt.expiresIn') || '7d';
-    const access_token = this.jwtService.sign(payload, { expiresIn } as object);
-
-    return {
-      message: 'Đăng nhập thành công',
-      access_token,
-      expires_in: expiresIn,
-      user,
-    };
+    return { ...this.signToken(user), message: 'Đăng nhập thành công' };
   }
 
   async register(dto: RegisterDto) {
@@ -129,13 +118,58 @@ export class AuthService {
     });
 
     const user = this.mapToAuthUser(created);
+    return { ...this.signToken(user), message: 'Đăng ký thành công' };
+  }
+
+  async findOrCreateGoogleUser(profile: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    picture: string;
+  }) {
+    const prisma = this.prisma as any;
+
+    const existing = await prisma.USER.findUnique({
+      where: { email: profile.email },
+    });
+
+    if (existing) {
+      return this.mapToAuthUser(existing);
+    }
+
+    const created = await prisma.$transaction(async (tx: any) => {
+      const userCreated = await tx.uSER.create({
+        data: {
+          user_name: `${profile.firstName} ${profile.lastName}`.trim(),
+          email: profile.email,
+          password_hash: null,
+          role: 'STUDENT',
+          profile_picture: profile.picture || null,
+          is_active: true,
+          credit: 0,
+        },
+      });
+
+      await tx.student.create({
+        data: {
+          student_id: userCreated.user_id,
+        },
+      });
+
+      return userCreated;
+    });
+
+    return this.mapToAuthUser(created);
+  }
+
+  signToken(user: AuthUser) {
     const payload: JwtPayload = { sub: user.userId, email: user.email };
     const expiresIn =
       this.configService.get<string>('auth.jwt.expiresIn') || '7d';
     const access_token = this.jwtService.sign(payload, { expiresIn } as object);
 
     return {
-      message: 'Đăng ký thành công',
+      message: 'Đăng nhập thành công',
       access_token,
       expires_in: expiresIn,
       user,
