@@ -131,6 +131,12 @@ export class AuthService {
   }) {
     const prisma = this.prisma as any;
 
+    if (!profile.email) {
+      throw new UnauthorizedException({
+        message: 'Google không cung cấp email',
+        error: 'GOOGLE_EMAIL_MISSING',
+      });
+    }
     const existing = await prisma.USER.findUnique({
       where: { email: profile.email },
     });
