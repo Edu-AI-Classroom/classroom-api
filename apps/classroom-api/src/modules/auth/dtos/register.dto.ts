@@ -28,9 +28,9 @@ export class RegisterDto {
   @ApiProperty({
     example: 'STUDENT',
     required: false,
-    enum: ['STUDENT', 'TEACHER'],
+    enum: ['STUDENT', 'TEACHER', 'PARENT'],
   })
   @IsOptional()
-  @IsIn(['STUDENT', 'TEACHER'])
-  role?: 'STUDENT' | 'TEACHER';
+  @IsIn(['STUDENT', 'TEACHER', 'PARENT'])
+  role?: 'STUDENT' | 'TEACHER' | 'PARENT';
 }

@@ -1,0 +1,16 @@
+model notification {
+  notification_id Int       @id @default(autoincrement())
+  user_id         Int
+  title           String    @db.VarChar(255)
+  body            String?   @db.Text
+  type            String    @db.VarChar(50)
+  link_url        String?   @db.VarChar(500)
+  metadata        Json?
+  read_at         DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+
+  USER USER @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, read_at, created_at])
+  @@index([type])
+}
