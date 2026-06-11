@@ -116,6 +116,14 @@ export class AuthService {
         });
       }
 
+      if (role === 'PARENT') {
+        await tx.parent.create({
+          data: {
+            parent_id: userCreated.user_id,
+          },
+        });
+      }
+
       return userCreated;
     });
 
@@ -177,6 +185,7 @@ export class AuthService {
     const existing = await prisma.USER.findUnique({
       where: { user_id: userId },
       include: {
+        parent: true,
         student: true,
         teacher: true,
       },
@@ -219,6 +228,12 @@ export class AuthService {
             where: { teacher_id: userId },
           });
         }
+
+        if (existing.parent) {
+          await tx.parent.delete({
+            where: { parent_id: userId },
+          });
+        }
       }
 
       if (dto.role === 'TEACHER') {
@@ -232,6 +247,34 @@ export class AuthService {
           await tx.teacher.create({
             data: {
               teacher_id: userId,
+            },
+          });
+        }
+
+        if (existing.parent) {
+          await tx.parent.delete({
+            where: { parent_id: userId },
+          });
+        }
+      }
+
+      if (dto.role === 'PARENT') {
+        if (existing.student) {
+          await tx.student.delete({
+            where: { student_id: userId },
+          });
+        }
+
+        if (existing.teacher) {
+          await tx.teacher.delete({
+            where: { teacher_id: userId },
+          });
+        }
+
+        if (!existing.parent) {
+          await tx.parent.create({
+            data: {
+              parent_id: userId,
             },
           });
         }

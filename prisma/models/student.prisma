@@ -6,6 +6,9 @@ model student {
   USER               USER                 @relation(fields: [student_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   class_student      class_student[]
   group_student      group_student[]
+  parent_student     parent_student[]
+  parent_link_code   parent_link_code[]
+  conversation       conversation[]
   student_ku_state   student_ku_state[]
   student_report     student_report[]
   student_submission student_submission[]

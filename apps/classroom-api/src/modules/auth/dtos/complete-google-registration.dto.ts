@@ -9,8 +9,8 @@ export class CompleteGoogleRegistrationDto {
 
   @ApiProperty({
     example: 'STUDENT',
-    enum: ['STUDENT', 'TEACHER'],
+    enum: ['STUDENT', 'TEACHER', 'PARENT'],
   })
-  @IsIn(['STUDENT', 'TEACHER'])
-  role: 'STUDENT' | 'TEACHER';
+  @IsIn(['STUDENT', 'TEACHER', 'PARENT'])
+  role: 'STUDENT' | 'TEACHER' | 'PARENT';
 }

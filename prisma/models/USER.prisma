@@ -19,9 +19,14 @@ model USER {
   approved_news     news[]              @relation("ApprovedNews")
   news_posts        news[]              @relation("UserPosts")
   personal_info     personal_info?
+  parent            parent?
   student           student?
   teacher           teacher?
   teacher_classroom teacher_classroom[]
   transaction       transaction[]
+  parent_link_codes parent_link_code[] @relation("ParentLinkCodeUsedBy")
+  sent_messages     message[]          @relation("MessageSender")
+  message_reads     message_read[]
+  notifications     notification[]
 }
 

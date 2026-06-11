@@ -17,5 +17,6 @@ model classroom {
   news              news[]
   student_report    student_report[]
   teacher_classroom teacher_classroom[]
+  conversation      conversation[]
 }
 

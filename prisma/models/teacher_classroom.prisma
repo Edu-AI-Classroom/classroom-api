@@ -6,6 +6,7 @@ model teacher_classroom {
 
   classroom classroom @relation(fields: [class_id], references: [class_id], onDelete: Cascade, onUpdate: NoAction)
   USER      USER      @relation(fields: [teacher_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  conversation conversation[]
 
   @@id([teacher_id, class_id])
 }

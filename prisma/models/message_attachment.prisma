@@ -1,0 +1,12 @@
+model message_attachment {
+  attachment_id Int    @id @default(autoincrement())
+  message_id    Int
+  file_url      String @db.VarChar(1000)
+  file_name     String @db.VarChar(255)
+  mime_type     String @db.VarChar(100)
+  file_size     Int
+
+  message message @relation(fields: [message_id], references: [message_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([message_id])
+}
