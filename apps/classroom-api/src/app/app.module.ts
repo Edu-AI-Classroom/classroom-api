@@ -15,6 +15,7 @@ import { LessonsModule } from '../modules/lessons/lessons.module';
 // import { AssignmentModule } from '@/modules/assignment/assignment.module';
 import { R2Module } from '../infrastructure/cloudflare_r2/r2.module';
 import { AdminModule } from '../modules/admin/admin.module';
+import { AdminDashboardModule } from '../modules/admin-dashboard/admin-dashboard.module';
 import { AiQuizModule } from '../modules/ai-quiz/ai-quiz.module';
 import { CommentsModule } from '../modules/comment/comments.module';
 import { NewsModule } from '../modules/new/news.module';
@@ -48,6 +49,7 @@ import { UsersModule } from '../modules/users/users.module';
     SubscriptionPlanModule,
     UsersModule,
     TransactionModule,
+    AdminDashboardModule,
     AdminModule,
     ClassroomModule,
     // PaymentModule,
