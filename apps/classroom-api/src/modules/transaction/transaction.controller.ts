@@ -293,6 +293,39 @@ export class TransactionController {
     }
   }
 
+  @Post('confirm/:orderCode')
+  @ApiOperation({
+    summary:
+      'Xác nhận thanh toán thành công sau khi redirect về frontend nếu webhook chưa xử lý kịp',
+  })
+  @ApiResponse({ status: 200, description: 'Kết quả xác nhận thanh toán' })
+  async confirmPaymentSuccess(
+    @CurrentUser() user: any,
+    @Param('orderCode') orderCode: string,
+  ) {
+    try {
+      if (!orderCode || orderCode.trim() === '') {
+        throw new BadRequestException('Invalid order code');
+      }
+
+      const result = await this.transactionService.confirmPaymentSuccess(
+        orderCode,
+        user?.userId,
+      );
+
+      return {
+        status: 'success',
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to confirm payment success: ${error.message}`);
+      return {
+        status: 'error',
+        message: error.message,
+      };
+    }
+  }
+
   /**
    * Update transaction
    * PUT /transactions/:id

@@ -86,13 +86,21 @@ export class AdminDashboardService {
       totalUsers,
       totalTeachers,
       totalStudents,
+      totalParents,
       totalClassrooms,
       revenueAgg,
       txCount,
+      newUsersInPeriod,
+      aiUsageAgg,
+      aiRequestCount,
+      trialTransactions,
+      paidTransactions,
+      classStudentCount,
     ] = await Promise.all([
       this.prisma.uSER.count(),
       this.prisma.uSER.count({ where: { role: 'TEACHER' } }),
       this.prisma.uSER.count({ where: { role: 'STUDENT' } }),
+      this.prisma.uSER.count({ where: { role: 'PARENT' } }),
       this.prisma.classroom.count({ where: { is_deleted: false } }),
       this.prisma.transaction.aggregate({
         _sum: { amount: true },
@@ -101,6 +109,23 @@ export class AdminDashboardService {
       this.prisma.transaction.count({
         where: { created_at: { gte: from, lt: to } },
       }),
+      this.prisma.uSER.count({
+        where: { created_at: { gte: from, lt: to } },
+      }),
+      this.prisma.ai_audit_log.aggregate({
+        _sum: { cost: true, total_tokens: true },
+        where: { created_at: { gte: from, lt: to } },
+      }),
+      this.prisma.ai_audit_log.count({
+        where: { created_at: { gte: from, lt: to } },
+      }),
+      this.prisma.transaction.count({
+        where: { status: 'TRIAL', created_at: { gte: from, lt: to } },
+      }),
+      this.prisma.transaction.count({
+        where: { status: 'SUCCESS', created_at: { gte: from, lt: to } },
+      }),
+      this.prisma.class_student.count(),
     ]);
 
     const windowMs = to.getTime() - from.getTime();
@@ -143,9 +168,20 @@ export class AdminDashboardService {
       totalUsers,
       totalTeachers,
       totalStudents,
+      totalParents,
       totalClassrooms,
       totalRevenue,
       totalTransactions: txCount,
+      newUsersInPeriod,
+      aiRequests: aiRequestCount,
+      aiCost: Number(aiUsageAgg._sum.cost ?? 0),
+      aiTokens: Number(aiUsageAgg._sum.total_tokens ?? 0),
+      trialTransactions,
+      paidTransactions,
+      averageClassSize:
+        totalClassrooms > 0
+          ? Number((classStudentCount / totalClassrooms).toFixed(1))
+          : 0,
       usersGrowth: this.growth(totalUsers, prevUsers),
       teachersGrowth: this.growth(totalTeachers, prevTeachers),
       studentsGrowth: this.growth(totalStudents, prevStudents),

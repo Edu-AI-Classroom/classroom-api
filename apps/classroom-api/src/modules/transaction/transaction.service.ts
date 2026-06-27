@@ -11,7 +11,7 @@ import {
   UpdateTransactionDto,
 } from './dtos';
 import { PayOSService } from './payos.service';
-import { PaymentGateway } from './types';
+import { PaymentGateway, PaymentStatus } from './types';
 
 @Injectable()
 export class TransactionService {
@@ -21,6 +21,16 @@ export class TransactionService {
     private prisma: PrismaService,
     private payosService: PayOSService,
   ) {}
+
+  private isSuccessfulPaymentStatus(status?: string | null) {
+    if (!status) return false;
+    const normalized = String(status).toUpperCase();
+    return (
+      normalized === PaymentStatus.COMPLETED ||
+      normalized === 'PAID' ||
+      normalized === 'SUCCESS'
+    );
+  }
 
   /**
    * Create a new transaction
@@ -238,7 +248,7 @@ export class TransactionService {
       }
 
       const { data, signature } = webhookDto;
-      const { orderCode, amount } = data;
+      const { orderCode } = data;
 
       // Find transaction by orderCode
       const transaction = await this.prisma.transaction.findFirst({
@@ -256,18 +266,18 @@ export class TransactionService {
         };
       }
 
-      // Update transaction status to PAID and save signature
-      await Promise.all([
-        this.prisma.transaction.update({
-          where: { transaction_id: transaction.transaction_id },
-          data: {
-            status: 'PAID',
-            signature: signature || '',
-            updated_at: new Date(),
-          },
-        }),
-        this.updateUserCredit(transaction.user_id, amount),
-      ]);
+      if (this.isSuccessfulPaymentStatus(transaction.status)) {
+        this.logger.log(
+          `Payment webhook ignored because transaction ${transaction.transaction_id} is already completed`,
+        );
+        return {
+          code: '00',
+          desc: 'Webhook processed successfully',
+          success: true,
+        };
+      }
+
+      await this.applySuccessfulPayment(transaction.transaction_id, signature);
 
       this.logger.log(
         `💰 Payment completed for transaction ${transaction.transaction_id}`,
@@ -289,24 +299,133 @@ export class TransactionService {
   }
 
   /**
-   * Update user credit after successful payment
+   * Apply subscription entitlements after successful payment
    */
-  private async updateUserCredit(userId: number, amount: number) {
-    try {
-      await this.prisma.uSER.update({
-        where: { user_id: userId },
+  private async applySuccessfulPayment(
+    transactionId: number,
+    signature?: string,
+  ) {
+    await this.prisma.$transaction(async (tx: any) => {
+      const transaction = await tx.transaction.findUnique({
+        where: { transaction_id: transactionId },
+      });
+
+      if (!transaction) {
+        throw new NotFoundException(`Transaction ${transactionId} not found`);
+      }
+
+      if (this.isSuccessfulPaymentStatus(transaction.status)) {
+        return;
+      }
+
+      if (!transaction.user_id) {
+        throw new BadRequestException(
+          `Transaction ${transactionId} has no user_id`,
+        );
+      }
+
+      if (!transaction.sub_code) {
+        throw new BadRequestException(
+          `Transaction ${transactionId} has no subscription code`,
+        );
+      }
+
+      const subscriptionPlan = await tx.subscription_plan.findUnique({
+        where: { sub_code: transaction.sub_code },
+      });
+
+      if (!subscriptionPlan) {
+        throw new NotFoundException(
+          `Subscription plan ${transaction.sub_code} not found`,
+        );
+      }
+
+      const now = new Date();
+      const aiTokenGrant = Math.max(subscriptionPlan.ai_token_limit ?? 0, 0);
+
+      await tx.transaction.update({
+        where: { transaction_id: transaction.transaction_id },
         data: {
-          credit: {
-            increment: Math.floor(amount),
-          },
+          status: PaymentStatus.COMPLETED,
+          signature: signature || transaction.signature || '',
+          updated_at: now,
         },
       });
 
-      this.logger.log(`User ${userId} credit updated by ${amount}`);
-    } catch (error) {
-      this.logger.error(`Failed to update user credit: ${error.message}`);
-      // Don't throw - log only
+      await tx.uSER.update({
+        where: { user_id: transaction.user_id },
+        data: {
+          credit: {
+            increment: aiTokenGrant,
+          },
+          updated_at: now,
+        },
+      });
+
+      await tx.personal_info.upsert({
+        where: { user_id: transaction.user_id },
+        create: {
+          user_id: transaction.user_id,
+          sub_id: subscriptionPlan.sub_id,
+          sub_start_date: now,
+          sub_status: 'ACTIVE',
+        },
+        update: {
+          sub_id: subscriptionPlan.sub_id,
+          sub_start_date: now,
+          sub_status: 'ACTIVE',
+        },
+      });
+
+      this.logger.log(
+        `Applied subscription ${subscriptionPlan.sub_code} to user ${transaction.user_id}: +${aiTokenGrant} AI tokens, max classes ${subscriptionPlan.max_classes ?? 'unlimited'}`,
+      );
+    });
+  }
+
+  async confirmPaymentSuccess(orderCode: string, userId?: number) {
+    const transaction = await this.prisma.transaction.findFirst({
+      where: {
+        order_code: orderCode,
+        ...(userId ? { user_id: userId } : {}),
+      },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException(
+        `Transaction for order ${orderCode} not found`,
+      );
     }
+
+    if (this.isSuccessfulPaymentStatus(transaction.status)) {
+      return {
+        transactionId: transaction.transaction_id,
+        orderCode,
+        status: PaymentStatus.COMPLETED,
+        alreadyCompleted: true,
+      };
+    }
+
+    const paymentInfo = await this.payosService.getPaymentInfo(orderCode);
+    const paymentStatus = (paymentInfo as any)?.status;
+
+    if (!this.isSuccessfulPaymentStatus(paymentStatus)) {
+      return {
+        transactionId: transaction.transaction_id,
+        orderCode,
+        status: paymentStatus ?? transaction.status ?? PaymentStatus.PENDING,
+        alreadyCompleted: false,
+      };
+    }
+
+    await this.applySuccessfulPayment(transaction.transaction_id);
+
+    return {
+      transactionId: transaction.transaction_id,
+      orderCode,
+      status: PaymentStatus.COMPLETED,
+      alreadyCompleted: false,
+    };
   }
 
   /**

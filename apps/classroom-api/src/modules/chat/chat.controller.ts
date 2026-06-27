@@ -19,7 +19,11 @@ import { Roles } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { ChatService } from './chat.service';
-import { CreateMessageDto, CreateStudentConversationDto } from './dtos';
+import {
+  CreateMessageDto,
+  CreateStudentConversationDto,
+  CreateTeacherConversationDto,
+} from './dtos';
 
 @ApiTags('Chat')
 @Controller('chat')
@@ -62,6 +66,32 @@ export class ChatController {
     @Body() dto: CreateStudentConversationDto,
   ) {
     return this.chatService.createStudentConversation(studentId, dto.classId);
+  }
+
+  @Post('teacher/student-conversations')
+  @Roles('TEACHER')
+  async createTeacherStudentConversation(
+    @CurrentUser('userId') teacherId: number,
+    @Body() dto: CreateTeacherConversationDto,
+  ) {
+    return this.chatService.createTeacherStudentConversation(
+      teacherId,
+      dto.classId,
+      dto.studentId,
+    );
+  }
+
+  @Post('teacher/parent-conversations')
+  @Roles('TEACHER')
+  async createTeacherParentConversation(
+    @CurrentUser('userId') teacherId: number,
+    @Body() dto: CreateTeacherConversationDto,
+  ) {
+    return this.chatService.createTeacherParentConversation(
+      teacherId,
+      dto.classId,
+      dto.studentId,
+    );
   }
 
   @Get('conversations/:id/messages')

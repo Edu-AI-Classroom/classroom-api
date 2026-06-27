@@ -20,6 +20,11 @@ type AiQuizQuestion =
       maxScore: number;
     };
 
+type AiGenerationUsage = {
+  tokensCharged: number;
+  tokensRemaining: number;
+};
+
 @Injectable()
 export class AiQuizService {
   constructor(
@@ -31,7 +36,7 @@ export class AiQuizService {
     const apiKey = this.config.get<string>('GEMINI_API_KEY');
     if (!apiKey) {
       throw new BadRequestException(
-        'Thiếu cấu hình GEMINI_API_KEY trên backend',
+        'Thiáº¿u cáº¥u hÃ¬nh GEMINI_API_KEY trÃªn backend',
       );
     }
     return new GoogleGenerativeAI(apiKey);
@@ -51,12 +56,12 @@ export class AiQuizService {
   ): AiQuizQuestion[] {
     if (!Array.isArray(questions)) {
       throw new BadRequestException(
-        'AI trả về format không hợp lệ (questions)',
+        'AI tráº£ vá» format khÃ´ng há»£p lá»‡ (questions)',
       );
     }
     if (questions.length !== totalQuestions) {
       throw new BadRequestException(
-        `AI trả về ${questions.length} câu, yêu cầu ${totalQuestions} câu`,
+        `AI tráº£ vá» ${questions.length} cÃ¢u, yÃªu cáº§u ${totalQuestions} cÃ¢u`,
       );
     }
 
@@ -65,7 +70,7 @@ export class AiQuizService {
       const questionText = String(q?.questionText ?? q?.question ?? '').trim();
       if (!questionText) {
         throw new BadRequestException(
-          `Câu ${idx + 1} thiếu nội dung questionText`,
+          `CÃ¢u ${idx + 1} thiáº¿u ná»™i dung questionText`,
         );
       }
 
@@ -73,7 +78,9 @@ export class AiQuizService {
         const options = Array.isArray(q?.options) ? q.options.map(String) : [];
         const correctIndex = Number(q?.correctIndex);
         if (options.length < 2) {
-          throw new BadRequestException(`Câu ${idx + 1} (MCQ) thiếu options`);
+          throw new BadRequestException(
+            `CÃ¢u ${idx + 1} (MCQ) thiáº¿u options`,
+          );
         }
         if (
           !Number.isInteger(correctIndex) ||
@@ -81,7 +88,7 @@ export class AiQuizService {
           correctIndex >= options.length
         ) {
           throw new BadRequestException(
-            `Câu ${idx + 1} (MCQ) correctIndex không hợp lệ`,
+            `CÃ¢u ${idx + 1} (MCQ) correctIndex khÃ´ng há»£p lá»‡`,
           );
         }
         return {
@@ -107,8 +114,65 @@ export class AiQuizService {
       }
 
       throw new BadRequestException(
-        `Câu ${idx + 1} type không hợp lệ (MCQ/ESSAY)`,
+        `CÃ¢u ${idx + 1} type khÃ´ng há»£p lá»‡ (MCQ/ESSAY)`,
       );
+    });
+  }
+
+  private estimateTokenCost(
+    dto: GenerateQuizWithAiDto,
+    totalQuestions: number,
+    essayCount: number,
+  ) {
+    const promptLength = dto.prompt?.trim().length ?? 0;
+    const promptUnits = Math.ceil(promptLength / 200);
+    return Math.max(1, totalQuestions * 8 + essayCount * 4 + promptUnits * 3);
+  }
+
+  private async reserveAiTokens(
+    userId: number,
+    tokensToCharge: number,
+  ): Promise<number> {
+    const result = await this.prisma.uSER.updateMany({
+      where: {
+        user_id: userId,
+        credit: { gte: tokensToCharge },
+      } as any,
+      data: {
+        credit: {
+          decrement: tokensToCharge,
+        },
+      } as any,
+    } as any);
+
+    if (result.count === 0) {
+      const user = await this.prisma.uSER.findUnique({
+        where: { user_id: userId },
+        select: { credit: true },
+      });
+      const currentCredit = user?.credit ?? 0;
+      throw new BadRequestException(
+        `Insufficient AI tokens. Required ${tokensToCharge}, available ${currentCredit}`,
+      );
+    }
+
+    const updatedUser = await this.prisma.uSER.findUnique({
+      where: { user_id: userId },
+      select: { credit: true },
+    });
+
+    return updatedUser?.credit ?? 0;
+  }
+
+  private async refundAiTokens(userId: number, tokensToRefund: number) {
+    if (tokensToRefund <= 0) return;
+    await this.prisma.uSER.update({
+      where: { user_id: userId },
+      data: {
+        credit: {
+          increment: tokensToRefund,
+        },
+      },
     });
   }
 
@@ -123,7 +187,7 @@ export class AiQuizService {
     });
     if (!quiz) {
       throw new BadRequestException(
-        'Quiz không tồn tại hoặc không thuộc quyền bạn',
+        'Quiz khÃ´ng tá»“n táº¡i hoáº·c khÃ´ng thuá»™c quyá»n báº¡n',
       );
     }
 
@@ -141,70 +205,84 @@ export class AiQuizService {
 
     if (mcqCount + essayCount !== totalQuestions) {
       throw new BadRequestException(
-        'Tổng mcqCount + essayCount phải bằng totalQuestions',
+        'Tá»•ng mcqCount + essayCount pháº£i báº±ng totalQuestions',
       );
     }
 
-    const genAI = this.getClient();
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-      },
-    });
-
-    const system = [
-      'Bạn là trợ lý tạo đề quiz cho giáo viên.',
-      'YÊU CẦU: Trả về một JSON object hợp lệ (không giải thích ngoài JSON).',
-      'JSON schema bắt buộc:',
-      '{ "questions": [ { "type": "MCQ"|"ESSAY", "questionText": string, "options"?: string[], "correctIndex"?: number, "expectedAnswer"?: string, "explanation"?: string } ] }',
-      'NGÔN NGỮ: TẤT CẢ nội dung (câu hỏi, phương án, giải thích, đáp án mẫu) PHẢI ĐƯỢC VIẾT BẰNG TIẾNG VIỆT.',
-      `Tổng số câu: ${totalQuestions}. MCQ: ${mcqCount}. Tự luận: ${essayCount}.`,
-      'MCQ: options 4 lựa chọn, correctIndex 0..3.',
-      'ESSAY: expectedAnswer BẮT BUỘC chỉ được 1 từ duy nhất.',
-      `Mỗi câu mặc định 1 điểm (frontend sẽ set maxScore = ${pointsPerQuestion}).`,
-    ].join('\n');
-
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: system }, { text: dto.prompt }],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.4,
-      },
-    });
-
-    const response = await result.response;
-    let text = response.text();
-
-    text = String(text ?? '');
-    // With responseMimeType: 'application/json', the model should return valid JSON directly.
-    // No need to extract JSON object from markdown or other text.
-    // However, keeping extractJsonObject for robustness in case the model deviates.
-    const jsonStr = this.extractJsonObject(text);
-    if (!jsonStr) {
-      throw new BadRequestException('AI không trả về JSON hợp lệ');
-    }
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      throw new BadRequestException('Không parse được JSON từ AI');
-    }
-
-    const questions = this.validateQuestions(
-      parsed?.questions,
+    const tokensToCharge = this.estimateTokenCost(
+      dto,
       totalQuestions,
-      pointsPerQuestion,
+      essayCount,
+    );
+    const tokensRemainingAfterCharge = await this.reserveAiTokens(
+      userId,
+      tokensToCharge,
     );
 
-    return {
-      quizId,
-      questions,
-    };
+    try {
+      const genAI = this.getClient();
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        generationConfig: {
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const system = [
+        'Báº¡n lÃ  trá»£ lÃ½ táº¡o Ä‘á» quiz cho giÃ¡o viÃªn.',
+        'YÃŠU Cáº¦U: Tráº£ vá» má»™t JSON object há»£p lá»‡ (khÃ´ng giáº£i thÃ­ch ngoÃ i JSON).',
+        'JSON schema báº¯t buá»™c:',
+        '{ "questions": [ { "type": "MCQ"|"ESSAY", "questionText": string, "options"?: string[], "correctIndex"?: number, "expectedAnswer"?: string, "explanation"?: string } ] }',
+        'NGÃ”N NGá»®: Táº¤T Cáº¢ ná»™i dung (cÃ¢u há»i, phÆ°Æ¡ng Ã¡n, giáº£i thÃ­ch, Ä‘Ã¡p Ã¡n máº«u) PHáº¢I ÄÆ¯á»¢C VIáº¾T Báº°NG TIáº¾NG VIá»†T.',
+        `Tá»•ng sá»‘ cÃ¢u: ${totalQuestions}. MCQ: ${mcqCount}. Tá»± luáº­n: ${essayCount}.`,
+        'MCQ: options 4 lá»±a chá»n, correctIndex 0..3.',
+        'ESSAY: expectedAnswer Báº®T BUá»˜C chá»‰ Ä‘Æ°á»£c 1 tá»« duy nháº¥t.',
+        `Má»—i cÃ¢u máº·c Ä‘á»‹nh 1 Ä‘iá»ƒm (frontend sáº½ set maxScore = ${pointsPerQuestion}).`,
+      ].join('\n');
+
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: system }, { text: dto.prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.4,
+        },
+      });
+
+      const response = await result.response;
+      const text = String(response.text() ?? '');
+      const jsonStr = this.extractJsonObject(text);
+      if (!jsonStr) {
+        throw new BadRequestException('AI khÃ´ng tráº£ vá» JSON há»£p lá»‡');
+      }
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        throw new BadRequestException('KhÃ´ng parse Ä‘Æ°á»£c JSON tá»« AI');
+      }
+
+      const questions = this.validateQuestions(
+        parsed?.questions,
+        totalQuestions,
+        pointsPerQuestion,
+      );
+
+      return {
+        quizId,
+        questions,
+        usage: {
+          tokensCharged: tokensToCharge,
+          tokensRemaining: tokensRemainingAfterCharge,
+        } satisfies AiGenerationUsage,
+      };
+    } catch (error) {
+      await this.refundAiTokens(userId, tokensToCharge);
+      throw error;
+    }
   }
 }

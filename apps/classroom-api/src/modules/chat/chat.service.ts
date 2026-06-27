@@ -112,6 +112,86 @@ export class ChatService {
     return this.mapConversation(conversation, studentId);
   }
 
+  async createTeacherStudentConversation(
+    teacherId: number,
+    classId: number,
+    studentId: number,
+  ) {
+    const prisma = this.prisma as any;
+    await this.verifyTeacherOwnsClass(teacherId, classId);
+    await this.verifyStudentInClass(studentId, classId);
+
+    const existing = await prisma.conversation.findFirst({
+      where: {
+        class_id: classId,
+        student_id: studentId,
+        teacher_id: teacherId,
+        parent_id: null,
+        conversation_type: 'STUDENT_TEACHER',
+      },
+      include: this.conversationInclude(),
+    });
+
+    const conversation =
+      existing ??
+      (await prisma.conversation.create({
+        data: {
+          conversation_type: 'STUDENT_TEACHER',
+          class_id: classId,
+          student_id: studentId,
+          teacher_id: teacherId,
+        },
+        include: this.conversationInclude(),
+      }));
+
+    return this.mapConversation(conversation, teacherId);
+  }
+
+  async createTeacherParentConversation(
+    teacherId: number,
+    classId: number,
+    studentId: number,
+  ) {
+    const prisma = this.prisma as any;
+    await this.verifyTeacherOwnsClass(teacherId, classId);
+    await this.verifyStudentInClass(studentId, classId);
+
+    const linkedParent = await prisma.parent_student.findFirst({
+      where: { student_id: studentId, status: 'ACTIVE' },
+      orderBy: [{ linked_at: 'desc' }, { parent_id: 'asc' }],
+    });
+
+    if (!linkedParent) {
+      throw new NotFoundException('Student has no linked parent');
+    }
+
+    const existing = await prisma.conversation.findFirst({
+      where: {
+        class_id: classId,
+        student_id: studentId,
+        parent_id: linkedParent.parent_id,
+        teacher_id: teacherId,
+        conversation_type: 'PARENT_TEACHER',
+      },
+      include: this.conversationInclude(),
+    });
+
+    const conversation =
+      existing ??
+      (await prisma.conversation.create({
+        data: {
+          conversation_type: 'PARENT_TEACHER',
+          class_id: classId,
+          student_id: studentId,
+          parent_id: linkedParent.parent_id,
+          teacher_id: teacherId,
+        },
+        include: this.conversationInclude(),
+      }));
+
+    return this.mapConversation(conversation, teacherId);
+  }
+
   async getParentConversations(parentId: number) {
     const prisma = this.prisma as any;
     const conversations = await prisma.conversation.findMany({
@@ -317,6 +397,16 @@ export class ChatService {
     });
     if (!classStudent)
       throw new ForbiddenException('Student is not in this class');
+  }
+
+  private async verifyTeacherOwnsClass(teacherId: number, classId: number) {
+    const prisma = this.prisma as any;
+    const ownership = await prisma.teacher_classroom.findFirst({
+      where: { teacher_id: teacherId, class_id: classId, is_owner: true },
+    });
+    if (!ownership) {
+      throw new ForbiddenException('Teacher does not own this class');
+    }
   }
 
   private async verifyConversationAccess(
