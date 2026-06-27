@@ -51,3 +51,17 @@ export class CreateStudentConversationDto {
   @Min(1)
   classId: number;
 }
+
+export class CreateTeacherConversationDto {
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  classId: number;
+
+  @ApiProperty({ example: 2 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  studentId: number;
+}

@@ -21,7 +21,7 @@ export class UsersService {
       where: { email: dto.email },
     });
     if (existing) {
-      throw new ConflictException('Email đã được sử dụng');
+      throw new ConflictException('Email Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng');
     }
 
     const password_hash = await bcrypt.hash(dto.password, SALT_ROUNDS);
@@ -39,7 +39,7 @@ export class UsersService {
     });
 
     return {
-      message: 'Tạo user thành công',
+      message: 'Táº¡o user thÃ nh cÃ´ng',
       data: this.mapToUserResponse(user),
     };
   }
@@ -58,7 +58,7 @@ export class UsersService {
       where: { user_id: id },
     });
     if (!user) {
-      throw new NotFoundException('User không tồn tại');
+      throw new NotFoundException('User khÃ´ng tá»“n táº¡i');
     }
     return this.mapToUserResponse(user);
   }
@@ -69,7 +69,7 @@ export class UsersService {
       where: { email },
     });
     if (!user) {
-      throw new NotFoundException('User không tồn tại');
+      throw new NotFoundException('User khÃ´ng tá»“n táº¡i');
     }
     return this.mapToUserResponse(user);
   }
@@ -81,7 +81,7 @@ export class UsersService {
       where: { user_id: id },
     });
     if (!existing) {
-      throw new NotFoundException('User không tồn tại');
+      throw new NotFoundException('User khÃ´ng tá»“n táº¡i');
     }
 
     if (dto.email && dto.email !== existing.email) {
@@ -89,7 +89,7 @@ export class UsersService {
         where: { email: dto.email },
       });
       if (duplicate) {
-        throw new ConflictException('Email đã được sử dụng');
+        throw new ConflictException('Email Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng');
       }
     }
 
@@ -111,7 +111,7 @@ export class UsersService {
     });
 
     return {
-      message: 'Cập nhật user thành công',
+      message: 'Cáº­p nháº­t user thÃ nh cÃ´ng',
       data: this.mapToUserResponse(user),
     };
   }
@@ -123,19 +123,18 @@ export class UsersService {
       where: { user_id: id },
     });
     if (!existing) {
-      throw new NotFoundException('User không tồn tại');
+      throw new NotFoundException('User khÃ´ng tá»“n táº¡i');
     }
 
     await prisma.uSER.delete({
       where: { user_id: id },
     });
 
-    return { message: 'Xóa user thành công' };
+    return { message: 'XÃ³a user thÃ nh cÃ´ng' };
   }
 
   async getCurrentSubscription(userId: number) {
     const prisma = this.prisma as any;
-    // Lấy personal_info của user để check xem đã đăng ký sub chưa
     const personalInfo = await prisma.personal_info.findUnique({
       where: { user_id: userId },
       include: {
@@ -143,53 +142,61 @@ export class UsersService {
       },
     });
 
-    // Nếu không có personal_info hoặc chưa có sub_id
     if (!personalInfo || !personalInfo.sub_id) {
       return null;
     }
 
-    // Kiểm tra transaction gần nhất có status = 'COMPLETED'
-    const transaction = await prisma.transaction.findFirst({
-      where: {
-        user_id: userId,
-        status: 'COMPLETED',
-      },
-      orderBy: {
-        created_at: 'desc',
-      },
-    });
-
-    // Nếu không có transaction thành công, không trả về gì
-    if (!transaction) {
-      return null;
-    }
-
     const subscriptionPlan = personalInfo.subscription_plan;
-    const startDate = transaction.created_at;
+    const startDate = personalInfo.sub_start_date;
 
-    if (!subscriptionPlan || !startDate) {
+    if (
+      !subscriptionPlan ||
+      !startDate ||
+      personalInfo.sub_status !== 'ACTIVE'
+    ) {
       return null;
     }
 
-    // Tính ngày hết hạn
     const durationDays = subscriptionPlan.duration_days || 30;
     const expiryDate = new Date(startDate);
     expiryDate.setDate(expiryDate.getDate() + durationDays);
 
-    // Tính số ngày còn lại
     const now = new Date();
     const timeDifference = expiryDate.getTime() - now.getTime();
     const daysRemaining = Math.ceil(timeDifference / (1000 * 3600 * 24));
-
-    // Kiểm tra hết hạn
     const isExpired = now > expiryDate;
 
-    // Nếu hết hạn, không trả về gì
     if (isExpired) {
-      return null;
+      return {
+        status: 'EXPIRED',
+        subscriptionName: subscriptionPlan.sub_name,
+        subscriptionCode: subscriptionPlan.sub_code,
+        startDate,
+        expiryDate,
+        daysRemaining: 0,
+        subscriptionStatus: 'EXPIRED',
+        aiTokenLimit: subscriptionPlan.ai_token_limit,
+        aiTokensRemaining: 0,
+        maxClasses: subscriptionPlan.max_classes ?? null,
+        usedClasses: 0,
+        remainingClasses: 0,
+      };
     }
 
-    // Nếu còn hạn, trả về thông tin subscription
+    const [user, usedClasses] = await Promise.all([
+      prisma.uSER.findUnique({
+        where: { user_id: userId },
+        select: { credit: true },
+      }),
+      prisma.teacher_classroom.count({
+        where: { teacher_id: userId, is_owner: true },
+      }),
+    ]);
+
+    const maxClasses = subscriptionPlan.max_classes ?? null;
+    const remainingClasses =
+      maxClasses == null ? null : Math.max(maxClasses - usedClasses, 0);
+
     return {
       status: 'ACTIVE',
       subscriptionName: subscriptionPlan.sub_name,
@@ -198,6 +205,11 @@ export class UsersService {
       expiryDate,
       daysRemaining,
       subscriptionStatus: 'ACTIVE',
+      aiTokenLimit: subscriptionPlan.ai_token_limit,
+      aiTokensRemaining: user?.credit ?? 0,
+      maxClasses,
+      usedClasses,
+      remainingClasses,
     };
   }
 

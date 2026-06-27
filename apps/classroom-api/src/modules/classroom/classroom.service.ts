@@ -170,6 +170,8 @@ export class ClassroomService {
   ): Promise<ClassroomResponseDto> {
     const { className, gradeLevel, subjectId } = createClassroomDto;
 
+    await this.enforceClassroomQuota(userId);
+
     // Verify subject exists
     const subject = await this.prisma.subject.findUnique({
       where: { subject_id: subjectId },
@@ -204,6 +206,46 @@ export class ClassroomService {
     });
 
     return this.mapClassroomToResponse(classroom, userId);
+  }
+
+  private async enforceClassroomQuota(userId: number) {
+    const personalInfo = await this.prisma.personal_info.findUnique({
+      where: { user_id: userId },
+      include: { subscription_plan: true },
+    });
+
+    const plan = personalInfo?.subscription_plan;
+    if (!personalInfo || !plan || personalInfo.sub_status !== 'ACTIVE') {
+      return;
+    }
+
+    if (!personalInfo.sub_start_date || !plan.duration_days) {
+      return;
+    }
+
+    const expiryDate = new Date(personalInfo.sub_start_date);
+    expiryDate.setDate(expiryDate.getDate() + plan.duration_days);
+
+    if (expiryDate.getTime() < Date.now()) {
+      return;
+    }
+
+    if (plan.max_classes == null || plan.max_classes <= 0) {
+      return;
+    }
+
+    const ownedClassCount = await this.prisma.teacher_classroom.count({
+      where: {
+        teacher_id: userId,
+        is_owner: true,
+      } as any,
+    } as any);
+
+    if (ownedClassCount >= plan.max_classes) {
+      throw new ForbiddenException(
+        `You have reached the class limit for plan ${plan.sub_name} (${plan.max_classes} classes)`,
+      );
+    }
   }
 
   /**
