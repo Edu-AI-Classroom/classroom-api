@@ -13,5 +13,8 @@ allowBuilds:
 
 autoInstallPeers: true
 
+overrides:
+  fastify: 5.7.4
+
 packages:
   - 'apps/*'
