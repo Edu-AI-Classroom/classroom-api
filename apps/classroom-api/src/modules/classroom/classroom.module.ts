@@ -8,5 +8,6 @@ import { ClassroomService } from './classroom.service';
   imports: [TerminusModule, HttpModule],
   controllers: [ClassroomController],
   providers: [ClassroomService],
+  exports: [ClassroomService],
 })
 export class ClassroomModule {}

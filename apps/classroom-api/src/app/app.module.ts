@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import authConfig from '../config/auth/auth.config';
+import agoraConfig from '../config/agora/agora.config';
 import healthConfig from '../config/health/health.config';
 import { AppLoggerModule } from '../infrastructure/logger';
 import { PrismaModule } from '../infrastructure/prisma/prisma.module';
@@ -24,6 +25,7 @@ import { ParentModule } from '../modules/parent/parent.module';
 import { StudentQuizModule } from '../modules/student-quiz/student-quiz.module';
 import { SubjectModule } from '../modules/subject/subject.module';
 import { SubscriptionPlanModule } from '../modules/subscription-plan/subscription-plan.module';
+import { AgoraModule } from '../modules/agora/agora.module';
 import { TeacherQuizModule } from '../modules/teacher-quiz/teacher-quiz.module';
 import { TransactionModule } from '../modules/transaction/transaction.module';
 import { UsersModule } from '../modules/users/users.module';
@@ -39,7 +41,7 @@ import { UsersModule } from '../modules/users/users.module';
       isGlobal: true,
       envFilePath: '.env',
       cache: true,
-      load: [healthConfig, authConfig],
+      load: [healthConfig, authConfig, agoraConfig],
     }),
     HealthModule,
     AppLoggerModule,
@@ -64,6 +66,7 @@ import { UsersModule } from '../modules/users/users.module';
     ChatModule,
     ParentModule,
     NotificationModule,
+    AgoraModule,
   ],
   controllers: [],
 })
