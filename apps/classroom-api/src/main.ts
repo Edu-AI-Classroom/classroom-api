@@ -36,9 +36,13 @@ async function bootstrap() {
     }),
   );
 
+  const corsOrigin = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
+    : true;
+
   // 6. Enable CORS
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || true,
+    origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   });

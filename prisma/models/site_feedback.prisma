@@ -1,0 +1,17 @@
+model site_feedback {
+  feedback_id Int       @id @default(autoincrement())
+  user_id     Int?
+  name        String    @db.VarChar(120)
+  email       String?   @db.VarChar(255)
+  role        String?   @db.VarChar(50)
+  rating      Int
+  comment     String    @db.Text
+  is_approved Boolean   @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @db.Timestamp(6)
+
+  USER USER? @relation(fields: [user_id], references: [user_id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([is_approved, created_at])
+  @@index([rating])
+}
