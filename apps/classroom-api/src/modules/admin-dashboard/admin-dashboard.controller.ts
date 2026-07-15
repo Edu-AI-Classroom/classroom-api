@@ -4,10 +4,8 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import {
-  AdminDashboardService,
-  AdminDateFilters,
-} from './admin-dashboard.service';
+import { AdminDashboardService } from './admin-dashboard.service';
+import type { AdminDateFilters } from './admin-dashboard.service';
 
 @ApiTags('Admin')
 @ApiBearerAuth('JWT-auth')
@@ -62,6 +60,18 @@ export class AdminDashboardController {
   @Get('transactions')
   async getTransactions(@Query() query: AdminDateFilters) {
     const data = await this.adminDashboardService.getTransactions(query);
+    return { success: true, data };
+  }
+
+  @Get('reviews')
+  async getReviews(@Query() query: AdminDateFilters) {
+    const data = await this.adminDashboardService.getReviews(query);
+    return { success: true, data };
+  }
+
+  @Get('users')
+  async getUsers(@Query() query: AdminDateFilters) {
+    const data = await this.adminDashboardService.getUsers(query);
     return { success: true, data };
   }
 }

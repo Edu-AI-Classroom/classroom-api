@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import agoraConfig from '../config/agora/agora.config';
 import authConfig from '../config/auth/auth.config';
 import healthConfig from '../config/health/health.config';
 import { AppLoggerModule } from '../infrastructure/logger';
@@ -16,6 +17,7 @@ import { LessonsModule } from '../modules/lessons/lessons.module';
 import { R2Module } from '../infrastructure/cloudflare_r2/r2.module';
 import { AdminModule } from '../modules/admin/admin.module';
 import { AdminDashboardModule } from '../modules/admin-dashboard/admin-dashboard.module';
+import { AgoraModule } from '../modules/agora/agora.module';
 import { AiQuizModule } from '../modules/ai-quiz/ai-quiz.module';
 import { CommentsModule } from '../modules/comment/comments.module';
 import { NewsModule } from '../modules/new/news.module';
@@ -27,6 +29,7 @@ import { SubscriptionPlanModule } from '../modules/subscription-plan/subscriptio
 import { TeacherQuizModule } from '../modules/teacher-quiz/teacher-quiz.module';
 import { TransactionModule } from '../modules/transaction/transaction.module';
 import { UsersModule } from '../modules/users/users.module';
+import { SiteFeedbackModule } from '../modules/site-feedback/site-feedback.module';
 @Module({
   providers: [
     {
@@ -39,7 +42,7 @@ import { UsersModule } from '../modules/users/users.module';
       isGlobal: true,
       envFilePath: '.env',
       cache: true,
-      load: [healthConfig, authConfig],
+      load: [healthConfig, authConfig, agoraConfig],
     }),
     HealthModule,
     AppLoggerModule,
@@ -64,6 +67,8 @@ import { UsersModule } from '../modules/users/users.module';
     ChatModule,
     ParentModule,
     NotificationModule,
+    SiteFeedbackModule,
+    AgoraModule,
   ],
   controllers: [],
 })

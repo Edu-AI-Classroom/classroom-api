@@ -464,4 +464,112 @@ export class AdminDashboardService {
       recent,
     };
   }
+
+  async getReviews(filters: AdminDateFilters) {
+    const { from, to } = this.resolveRange(filters);
+
+    const rows = await this.prisma.site_feedback.findMany({
+      where: {
+        created_at: { gte: from, lt: to },
+      },
+      select: {
+        feedback_id: true,
+        name: true,
+        email: true,
+        role: true,
+        rating: true,
+        comment: true,
+        is_approved: true,
+        created_at: true,
+      },
+      orderBy: { created_at: 'desc' },
+      take: 50,
+    });
+
+    const approvedRows = rows.filter((row) => row.is_approved);
+    const ratings = approvedRows.map((row) => row.rating);
+
+    const averageRating = ratings.length
+      ? Number(
+          (
+            ratings.reduce((total, rating) => total + rating, 0) /
+            ratings.length
+          ).toFixed(1),
+        )
+      : 0;
+
+    const byRating = new Map<number, number>();
+    for (const rating of ratings) {
+      byRating.set(rating, (byRating.get(rating) ?? 0) + 1);
+    }
+
+    const comments = approvedRows
+      .map((row) => {
+        return {
+          id: String(row.feedback_id),
+          userName: row.name,
+          email: row.email ?? '',
+          role: row.role ?? 'VISITOR',
+          feature: 'Landing page',
+          rating: row.rating,
+          comment: row.comment,
+          feedback: '',
+          createdAt: row.created_at?.toISOString() ?? new Date().toISOString(),
+        };
+      })
+      .slice(0, 12);
+
+    return {
+      totalReviews: ratings.length,
+      averageRating,
+      commentsCount: comments.length,
+      ratingBreakdown: Array.from({ length: 5 }, (_, index) => {
+        const rating = index + 1;
+        return { rating, value: byRating.get(rating) ?? 0 };
+      }),
+      recentComments: comments,
+    };
+  }
+
+  async getUsers(filters: AdminDateFilters) {
+    const { from, to } = this.resolveRange(filters);
+
+    const users = await this.prisma.uSER.findMany({
+      where: {
+        created_at: { gte: from, lt: to },
+      },
+      select: {
+        user_id: true,
+        user_name: true,
+        email: true,
+        role: true,
+        is_active: true,
+        credit: true,
+        created_at: true,
+      },
+      orderBy: { created_at: 'desc' },
+      take: 30,
+    });
+
+    const roleSummary = await this.prisma.uSER.groupBy({
+      by: ['role'],
+      _count: { _all: true },
+    });
+
+    return {
+      roleSummary: roleSummary.map((item) => ({
+        role: item.role ?? 'UNKNOWN',
+        value: item._count._all,
+      })),
+      recentUsers: users.map((user) => ({
+        id: user.user_id,
+        name: user.user_name,
+        email: user.email,
+        role: user.role ?? 'UNKNOWN',
+        isActive: user.is_active ?? true,
+        credit: user.credit ?? 0,
+        createdAt: user.created_at?.toISOString() ?? new Date().toISOString(),
+      })),
+    };
+  }
 }
